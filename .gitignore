@@ -50,3 +50,10 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
+**/work
+**/csrc
+simv.*
+vc_hdrs.h
+simv
+verdi_config_file
+build.log
