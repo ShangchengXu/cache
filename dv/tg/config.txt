@@ -1,0 +1,3 @@
+SourcePath = ["../../de/rtl"];
+TargetPath = "./";
+except module = [];
