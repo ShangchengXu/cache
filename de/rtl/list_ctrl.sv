@@ -56,16 +56,6 @@ struct {
 
 
 
-assign tag0_is_head = hit_tag_0 == lru_list.head && !lru_list.empty;
-assign tag0_is_tail = hit_tag_0 == lru_list.tail && !lru_list.empty;
-
-assign tag1_is_head = hit_tag_1 == lru_list.head && !lru_list.empty;
-assign tag1_is_tail = hit_tag_1 == lru_list.tail && !lru_list.empty;
-
-assign tag0_tag1 = tag_table[hit_tag_0].nxt_tag == hit_tag_1;
-assign tag1_tag0 = tag_table[hit_tag_1].nxt_tag == hit_tag_0;
-
-assign hit_comflict = hit_tag_0 == hit_tag_1;
 
 always_comb begin
     hit_tag_0 = 0;
@@ -102,6 +92,18 @@ assign proc_hit_1 = acc_hit_1 || ((acc_cmd_1 == 2'b10)&& acc_req_1 && (free_list
 assign allocate_0 = (acc_cmd_0 == 2'b10)&& acc_req_0 && !free_list.empty;
 assign allocate_1 = (acc_cmd_1 == 2'b10)&& acc_req_1 && ((free_list.length > 1) || (!allocate_0 && !free_list.empty));
 
+
+assign tag0_is_head = proc_tag_0 == lru_list.head && !lru_list.empty;
+assign tag0_is_tail = proc_tag_0 == lru_list.tail && !lru_list.empty;
+
+assign tag1_is_head = proc_tag_1 == lru_list.head && !lru_list.empty;
+assign tag1_is_tail = proc_tag_1 == lru_list.tail && !lru_list.empty;
+
+assign tag0_tag1 = tag_table[proc_tag_0].nxt_tag == proc_tag_1;
+assign tag1_tag0 = tag_table[proc_tag_1].nxt_tag == proc_tag_0;
+
+assign hit_comflict = hit_tag_0 == hit_tag_1;
+
 always_comb begin
     return_tag_0 = 0;
     if(allocate_0) begin
@@ -130,102 +132,303 @@ always_comb begin
 end
 
 
-generate
-    for(genvar i = 0; i < lists_depth; i++) begin:tag_table_grp
-        always_ff@(posedge clk or negedge rst_n) begin
-            if(!rst_n) begin
-                tag_table[i].status <= 3'b0;
-                if(i == 0) begin
-                    tag_table[i].pre_tag <= lists_depth - 1;
-                end else begin
-                    tag_table[i].pre_tag <= i - 1;
-                end
-                if(i == lists_depth - 1) begin
-                    tag_table[i].nxt_tag <= 0;
-                end else begin
-                    tag_table[i].nxt_tag <= i + 1;
-                end
-            end
-        end else if(proc_hit_0 && proc_hit_1 && !hit_comflict) begin
-            if(tag0_tag1 && !tag0_is_head) begin
-                tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag;
-                tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag;
-            end else if (tag1_tag0 && !tag1_is_head) begin
-                tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag;
-                tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag;
-            end else if(!tag0_tag1 && !tag1_tag0) begin
-                if(tag0_is_head && tag1_is_tail) begin
-                    tag_table[proc_tag_0].pre_tag <= proc_tag_1;
-                    tag_table[proc_tag_1].nxt_tag <= proc_tag_0;
-                end else if(tag1_is_head && tag0_is_tail) begin
-                    tag_table[proc_tag_1].pre_tag <= proc_tag_0;
-                    tag_table[proc_tag_0].nxt_tag <= proc_tag_1;
-                end else if(tag0_is_head && !tag1_is_tail) begin
-                    tag_table[proc_tag_0].pre_tag <= proc_tag_1;
-                    tag_table[proc_tag_1].nxt_tag <= proc_tag_0;
-                    tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
-                    tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
-                end else if(tag1_is_head && !tag0_is_tail) begin
-                    tag_table[proc_tag_1].pre_tag <= proc_tag_0;
-                    tag_table[proc_tag_0].nxt_tag <= proc_tag_1;
-                    tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
-                    tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
-                end else if(tag0_is_tail) begin
-                    tag_table[proc_tag_0].nxt_tag     <= proc_tag_1;
-                    tag_table[proc_tag_1].pre_tag     <= proc_tag_0;
-                    tag_table[proc_tag_1].nxt_tag     <= lru_list.head;
-                    tag_table[lru_list.head].pre_tag <= proc_tag_1;
-                    tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
-                    tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
-                end else if(tag1_is_tail) begin
-                    tag_table[proc_tag_0].nxt_tag     <= proc_tag_1;
-                    tag_table[proc_tag_1].pre_tag     <= proc_tag_0;
-                    tag_table[proc_tag_1].nxt_tag     <= lru_list.head;
-                    tag_table[lru_list.head].pre_tag <= proc_tag_1;
-                    tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
-                    tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
-                end else begin
-                    tag_table[proc_tag_0].nxt_tag     <= proc_tag_1;
-                    tag_table[proc_tag_1].pre_tag     <= proc_tag_0;
-                    tag_table[proc_tag_1].nxt_tag     <= lru_list.head;
-                    tag_table[lru_list.head].pre_tag <= proc_tag_1;
-                    tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
-                    tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
-                    tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
-                    tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
-                end
-            end
-        end else if(proc_hit_0 && proc_hit_1 && hit_comflict) begin
-            if(!tag0_is_head && tag0_is_tail) begin
-                    tag_table[proc_tag_0].nxt_tag <= lru_list.head;
-                    tag_table[lru_list.head].pre_tag <= proc_tag_0;
-            end else if(!tag0_is_head) begin
-                    tag_table[proc_tag_0].nxt_tag <= lru_list.head;
-                    tag_table[lru_list.head].pre_tag <= proc_tag_0;
-                    tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
-                    tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
-            end
-        end else if(proc_hit_0) begin
-            if(!tag0_is_head && tag0_is_tail) begin
-                    tag_table[proc_tag_0].nxt_tag <= lru_list.head;
-                    tag_table[lru_list.head].pre_tag <= proc_tag_0;
-            end else if(!tag0_is_head) begin
-                    tag_table[proc_tag_0].nxt_tag <= lru_list.head;
-                    tag_table[lru_list.head].pre_tag <= proc_tag_0;
-                    tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
-                    tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
-            end
-        end else if(proc_hit_1) begin
-            if(!tag1_is_head && tag1_is_tail) begin
-                    tag_table[proc_tag_1].nxt_tag <= lru_list.head;
-                    tag_table[lru_list.head].pre_tag <= proc_tag_1;
-            end else if(!tag1_is_head) begin
-                    tag_table[proc_tag_1].nxt_tag <= lru_list.head;
-                    tag_table[lru_list.head].pre_tag <= proc_tag_1;
-                    tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
-                    tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        lru_list.head <= 0;
+        lru_list.tail <= 0;
+        lru_list.length <= 0;
+        free_list.head <= 0;
+        free_list.tail <= 0;
+        free_list.length <= 0;
+    end else if(allocate_0 && allocate_1 && !lru_list.empty) begin
+        lru_list.head <= return_tag_0;
+        lru_list.length <= lru_list.length + 2;
+        free_list.length <= free_list.length - 2;
+        free_list.tail <= tag_table[return_tag_1].pre_tag;
+    end else if(allocate_0 && allocate_1 && lru_list.empty) begin
+        lru_list.head <= return_tag_0;
+        lru_list.tail <= return_tag_1;
+        lru_list.length <= lru_list.length + 2;
+        free_list.length <= free_list.length - 2;
+        free_list.tail <= tag_table[return_tag_1].pre_tag;
+    end else if(allocate_0 && proc_hit_1) begin
+        if(!tag1_is_head && tag1_is_tail) begin
+            lru_list.head <= proc_tag_1;
+            lru_list.tail <= tag_table[proc_tag_1].pre_tag;
+            lru_list.length <= lru_list + 1;
+            free_list.length <= free_list.length - 1;
+            free_list.tail <= tag_table[return_tag_0].pre_tag;
+        end else if(!tag1_is_head && !tag1_is_tail) begin
+            lru_list.head <= proc_tag_1;
+            lru_list.length <= lru_list + 1;
+            free_list.length <= free_list.length - 1;
+            free_list.tail <= tag_table[return_tag_0].pre_tag;
+        end else if(tag1_is_head) begin
+            lru_list.head <= proc_tag_0;
+            lru_list.length <= lru_list + 1;
+            free_list.tail <= tag_table[return_tag_0].pre_tag;
+            free_list.length <= free_list.length - 1;
+        end
+    end else if(allocate_1 && proc_hit_0) begin
+        if(!tag0_is_head && tag0_is_tail) begin
+            lru_list.head <= proc_tag_0;
+            lru_list.tail <= tag_table[proc_tag_0].pre_tag;
+            lru_list.length <= lru_list + 1;
+            free_list.length <= free_list.length - 1;
+            free_list.tail <= tag_table[return_tag_1].pre_tag;
+        end else if(!tag0_is_head && !tag0_is_tail) begin
+            lru_list.head <= proc_tag_0;
+            lru_list.length <= lru_list + 1;
+            free_list.length <= free_list.length - 1;
+            free_list.tail <= tag_table[return_tag_1].pre_tag;
+        end else if(tag0_is_head) begin
+            lru_list.head <= proc_tag_1;
+            lru_list.length <= lru_list + 1;
+            free_list.tail <= tag_table[return_tag_1].pre_tag;
+            free_list.length <= free_list.length - 1;
+        end
+    end else if(proc_hit_0 && proc_hit_1 && !hit_comflict) begin
+        if(tag0_tag1 && !tag0_is_head && !tag1_is_tail) begin
+            lru_list.head <= proc_tag_0;
+        end else if(tag0_tag1 && !tag0_is_head && tag1_is_tail) begin
+            lru_list.head <= proc_tag_0;
+            lru_list.tail <= tag_table[proc_tag_0].pre_tag;
+        end else if (tag1_tag0 && !tag1_is_head && !tag0_is_tail) begin
+            lru_list.head <= proc_tag_1;
+        end else if (tag1_tag0 && !tag1_is_head && tag0_is_tail) begin
+            lru_list.head <= proc_tag_1;
+            lru_list.tail <= tag_table[proc_tag_1].pre_tag;
+        end else if(!tag0_tag1 && !tag1_tag0) begin
+            if(tag0_is_head && tag1_is_tail) begin
+                lru_list.head <= proc_tag_1;
+                lru_list.tail <= tag_table[proc_tag_1].pre_tag;
+            end else if(tag1_is_head && tag0_is_tail) begin
+                lru_list.head <= proc_tag_0;
+                lru_list.tail <= tag_table[proc_tag_0].pre_tag;
+            end else if(tag0_is_head && !tag1_is_tail) begin
+                lru_list.head <= proc_tag_1;
+            end else if(tag1_is_head && !tag0_is_tail) begin
+                lru_list.head <= proc_tag_0;
+            end else if(tag0_is_tail) begin
+                lru_list.head <= proc_tag_0;
+                lru_list.tail <= tag_table[proc_tag_0].pre_tag;
+            end else if(tag1_is_tail) begin
+                lru_list.head <= proc_tag_0;
+                lru_list.tail <= tag_table[proc_tag_1].pre_tag;
+            end else begin
+                lru_list.head <= proc_tag_0;
             end
         end
+    end else if(proc_hit_0 && proc_hit_1 && hit_comflict) begin
+        if(!tag0_is_head && tag0_is_tail) begin
+                lru_list.head <= proc_tag_0;
+                lru_list.tail <= tag_table[proc_tag_0].pre_tag;
+        end else if(!tag0_is_head) begin
+                lru_list.head <= proc_tag_0;
+        end
+    end else if(proc_hit_0) begin
+        if(!tag0_is_head && tag0_is_tail) begin
+                lru_list.head <= proc_tag_0;
+                lru_list.tail <= tag_table[proc_tag_0].pre_tag;
+        end else if(!tag0_is_head) begin
+                lru_list.head <= proc_tag_0;
+        end
+    end else if(proc_hit_1) begin
+        if(!tag1_is_head && tag1_is_tail) begin
+                lru_list.head <= proc_tag_1;
+                lru_list.tail <= tag_table[proc_tag_1].pre_tag;
+        end else if(!tag1_is_head) begin
+                lru_list.head <= proc_tag_1;
+        end
+    end else if(allocate_0) begin
+        if(!lru_list.empty) begin
+            lru_list.head <= return_tag_0;
+            lru_list.length <= lru_list.length + 1;
+        end else begin
+            lru_list.head <= return_tag_0;
+            lru_list.tail <= return_tag_0;
+            lru_list.length <= lru_list.length + 1;
+        end
+    end else if(allocate_1) begin
+        if(!lru_list.empty) begin
+            lru_list.head <= return_tag_1;
+            lru_list.length <= lru_list.length + 1;
+        end else begin
+            lru_list.head <= return_tag_1;
+            lru_list.tail <= return_tag_1;
+            lru_list.length <= lru_list.length + 1;
+        end
+    end
+end
+
+
+
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+            for(integer i = 0; i < lists_depth; i++) begin
+                    if(i == 0) begin
+                        tag_table[i].pre_tag <= lists_depth - 1;
+                    end else begin
+                        tag_table[i].pre_tag <= i - 1;
+                    end
+                    if(i == lists_depth - 1) begin
+                        tag_table[i].nxt_tag <= 0;
+                    end else begin
+                        tag_table[i].nxt_tag <= i + 1;
+                    end
+            end
+    end else if(allocate_0 && allocate_1 && !lru_list.empty) begin
+        tag_table[return_tag_0].nxt_tag <= return_tag_1;
+        tag_table[return_tag_1].pre_tag <= return_tag_0;
+        tag_table[return_tag_1].nxt_tag <= lru_list.head;
+        tag_table[lru_list.head].pre_tag <= return_tag_1;
+    end else if(allocate_0 && allocate_1 && lru_list.empty) begin
+        tag_table[return_tag_0].nxt_tag <= return_tag_1;
+        tag_table[return_tag_1].pre_tag <= return_tag_0;
+    end else if(allocate_0 && proc_hit_1) begin
+        if(!tag1_is_head && tag1_is_tail) begin
+            tag_table[return_tag_0].nxt_tag <= lru_list.head;
+            tag_table[return_tag_0].pre_tag <= proc_tag_1;
+            tag_table[lru_list.head].pre_tag <= return_tag_0;
+            tag_table[proc_tag_1].nxt_tag <= return_tag_0;
+        end else if(!tag1_is_head && !tag1_is_tail) begin
+            tag_table[return_tag_0].nxt_tag <= lru_list.head;
+            tag_table[return_tag_0].pre_tag <= proc_tag_1;
+            tag_table[lru_list.head].pre_tag <= return_tag_0;
+            tag_table[proc_tag_1].nxt_tag <= return_tag_0;
+            tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
+            tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
+        end else if(tag1_is_head) begin
+            tag_table[proc_tag_1].pre_tag <= return_tag_0;
+            tag_table[return_tag_0].nxt_tag <= proc_tag_1;
+        end
+    end else if(allocate_1 && proc_hit_0) begin
+        if(!tag0_is_head && tag0_is_tail) begin
+            tag_table[return_tag_1].nxt_tag <= lru_list.head;
+            tag_table[return_tag_1].pre_tag <= proc_tag_0;
+            tag_table[lru_list.head].pre_tag <= return_tag_1;
+            tag_table[proc_tag_0].nxt_tag <= return_tag_1;
+        end else if(!tag0_is_head && !tag0_is_tail) begin
+            tag_table[return_tag_1].nxt_tag <= lru_list.head;
+            tag_table[return_tag_1].pre_tag <= proc_tag_0;
+            tag_table[lru_list.head].pre_tag <= return_tag_1;
+            tag_table[proc_tag_0].nxt_tag <= return_tag_1;
+            tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
+            tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
+        end else if(tag0_is_head) begin
+            tag_table[proc_tag_0].pre_tag <= return_tag_1;
+            tag_table[return_tag_1].nxt_tag <= proc_tag_0;
+        end
+    end else if(proc_hit_0 && proc_hit_1 && !hit_comflict) begin
+        if(tag0_tag1 && !tag0_is_head && !tag1_is_tail) begin
+            tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag;
+            tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag;
+            tag_table[proc_tag_1].nxt_tag <= lru_list.head;
+        end else if(tag0_tag1 && !tag0_is_head && tag1_is_tail) begin
+            tag_table[proc_tag_1].nxt_tag <= lru_list.head;
+            tag_table[lru_list.head].pre_tag <= proc_tag_1;
+            tag_table[proc_tag_1].nxt_tag <= lru_list.head;
+        end else if (tag1_tag0 && !tag1_is_head && !tag0_is_tail) begin
+            tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag;
+            tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag;
+            tag_table[proc_tag_0].nxt_tag <= lru_list.head;
+        end else if (tag1_tag0 && !tag1_is_head && tag0_is_tail) begin
+            tag_table[proc_tag_0].nxt_tag <= lru_list.head;
+            tag_table[lru_list.head].pre_tag <= proc_tag_0;
+            tag_table[proc_tag_0].nxt_tag <= lru_list.head;
+        end else if(!tag0_tag1 && !tag1_tag0) begin
+            if(tag0_is_head && tag1_is_tail) begin
+                tag_table[proc_tag_0].pre_tag <= proc_tag_1;
+                tag_table[proc_tag_1].nxt_tag <= proc_tag_0;
+            end else if(tag1_is_head && tag0_is_tail) begin
+                tag_table[proc_tag_1].pre_tag <= proc_tag_0;
+                tag_table[proc_tag_0].nxt_tag <= proc_tag_1;
+            end else if(tag0_is_head && !tag1_is_tail) begin
+                tag_table[proc_tag_0].pre_tag <= proc_tag_1;
+                tag_table[proc_tag_1].nxt_tag <= proc_tag_0;
+                tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
+                tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
+            end else if(tag1_is_head && !tag0_is_tail) begin
+                tag_table[proc_tag_1].pre_tag <= proc_tag_0;
+                tag_table[proc_tag_0].nxt_tag <= proc_tag_1;
+                tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
+                tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
+            end else if(tag0_is_tail) begin
+                tag_table[proc_tag_0].nxt_tag     <= proc_tag_1;
+                tag_table[proc_tag_1].pre_tag     <= proc_tag_0;
+                tag_table[proc_tag_1].nxt_tag     <= lru_list.head;
+                tag_table[lru_list.head].pre_tag <= proc_tag_1;
+                tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
+                tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
+            end else if(tag1_is_tail) begin
+                tag_table[proc_tag_0].nxt_tag     <= proc_tag_1;
+                tag_table[proc_tag_1].pre_tag     <= proc_tag_0;
+                tag_table[proc_tag_1].nxt_tag     <= lru_list.head;
+                tag_table[lru_list.head].pre_tag <= proc_tag_1;
+                tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
+                tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
+            end else begin
+                tag_table[proc_tag_0].nxt_tag     <= proc_tag_1;
+                tag_table[proc_tag_1].pre_tag     <= proc_tag_0;
+                tag_table[proc_tag_1].nxt_tag     <= lru_list.head;
+                tag_table[lru_list.head].pre_tag <= proc_tag_1;
+                tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
+                tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
+                tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
+                tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
+            end
+        end
+    end else if(proc_hit_0 && proc_hit_1 && hit_comflict) begin
+        if(!tag0_is_head && tag0_is_tail) begin
+                tag_table[proc_tag_0].nxt_tag <= lru_list.head;
+                tag_table[lru_list.head].pre_tag <= proc_tag_0;
+        end else if(!tag0_is_head) begin
+                tag_table[proc_tag_0].nxt_tag <= lru_list.head;
+                tag_table[lru_list.head].pre_tag <= proc_tag_0;
+                tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
+                tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
+        end
+    end else if(proc_hit_0) begin
+        if(!tag0_is_head && tag0_is_tail) begin
+                tag_table[proc_tag_0].nxt_tag <= lru_list.head;
+                tag_table[lru_list.head].pre_tag <= proc_tag_0;
+        end else if(!tag0_is_head) begin
+                tag_table[proc_tag_0].nxt_tag <= lru_list.head;
+                tag_table[lru_list.head].pre_tag <= proc_tag_0;
+                tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
+                tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
+        end
+    end else if(proc_hit_1) begin
+        if(!tag1_is_head && tag1_is_tail) begin
+                tag_table[proc_tag_1].nxt_tag <= lru_list.head;
+                tag_table[lru_list.head].pre_tag <= proc_tag_1;
+        end else if(!tag1_is_head) begin
+                tag_table[proc_tag_1].nxt_tag <= lru_list.head;
+                tag_table[lru_list.head].pre_tag <= proc_tag_1;
+                tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
+                tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
+        end
+    end else if(allocate_0) begin
+        if(!lru_list.empty) begin
+            tag_table[return_tag_0].nxt_tag <= lru_list.head;
+            tag_table[lru_list.head].pre_tag <= return_tag_0;
+        end
+    end else if(allocate_1) begin
+        if(!lru_list.empty) begin
+            tag_table[return_tag_1].nxt_tag <= lru_list.head;
+            tag_table[lru_list.head].pre_tag <= return_tag_1;
+        end
+    end
+end
+
+assign lru_list.empty  = lru_list.length  == 0;
+assign free_list.empty = free_list.length == 0;
+
+generate
+    for(genvar i = 0; i < lists_depth; i++) begin:tag_table_grp
+
+
     end
 endgenerate
 
