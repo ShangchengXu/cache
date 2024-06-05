@@ -109,14 +109,14 @@ assign fetch_hsked = fetch_req && fetch_gnt;
 
 assign mem_whsked = mem_wen && mem_wready;
 
-assign wr_ready = wr_cs == IDLE || mem_whsked;
+assign wr_ready = (wr_cs == IDLE) || (wr_cs == NORM);
 
 assign has_comflict = (proc_status_r == 3'b010) && (proc_addr_r == proc_addr_w);
 
 assign comflict_clear = proc_status_r == 3'b011;
 
 always_comb begin
-    if(wr_cs == CHECK_COMFLICT) begin
+    if(cs_is_check_comflict) begin
         proc_status_w = 3'b001;
     end else if(cs_is_allocate_line || cs_is_fetch_req || cs_is_wait_fetch_comp) begin
         proc_status_w = 3'b010;

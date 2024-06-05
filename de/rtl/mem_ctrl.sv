@@ -52,6 +52,8 @@ assign local_mem_ren = mem_ren || fetch_mem_ren;
 assign local_mem_waddr = fetch_mem_wen ? fetch_mem_waddr : mem_waddr;
 assign local_mem_raddr = fetch_mem_ren ? fetch_mem_raddr : mem_raddr;
 
+assign local_mem_wdata = fetch_mem_wen ? fetch_mem_wdata : mem_wdata;
+
 always_ff @(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         mem_rdata_valid <= 1'b0;

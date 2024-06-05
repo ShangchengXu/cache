@@ -113,14 +113,14 @@ assign fetch_hsked = fetch_req && fetch_gnt;
 
 assign mem_rhsked = mem_ren && mem_rready;
 
-assign rd_ready = rd_cs == IDLE || mem_rhsked;
+assign rd_ready = (rd_cs == IDLE) || (rd_cs == NORM);
 
 assign has_comflict = (proc_status_w == 3'b010 || proc_status_w == 3'b001) && (proc_addr_r == proc_addr_w);
 
 assign comflict_clear = proc_status_w == 3'b011;
 
 always_comb begin
-    if(rd_cs == CHECK_COMFLICT) begin
+    if(cs_is_check_comflict) begin
         proc_status_r = 3'b001;
     end else if(cs_is_acc_mem && mem_rhsked) begin
         proc_status_r = 3'b011;
