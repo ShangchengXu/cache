@@ -1,0 +1,15 @@
+../../uvc/mem_ctrl_package.sv
+../../uvc/mem_ctrl_interface_port.sv
+../../uvc/mem_ctrl_interface_inner.sv
+../../uvc/mem_ctrl_transaction.sv
+../../uvc/mem_ctrl_sequencer.sv
+../../uvc/mem_ctrl_vsqr.sv
+../../uvc/mem_ctrl_driver.sv
+../../uvc/mem_ctrl_monitor.sv
+../../uvc/mem_ctrl_agent.sv
+../../uvc/mem_ctrl_model.sv
+../../uvc/mem_ctrl_scoreboard.sv
+../../uvc/mem_ctrl_env.sv
+../../uvc/mem_ctrl_base_test.sv
+../../seq_lib/mem_ctrl_case0_sequence.sv
+../../seq_lib/mem_ctrl_case0_vseq.sv
