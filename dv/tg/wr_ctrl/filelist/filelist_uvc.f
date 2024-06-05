@@ -1,0 +1,15 @@
+../../uvc/wr_ctrl_package.sv
+../../uvc/wr_ctrl_interface_port.sv
+../../uvc/wr_ctrl_interface_inner.sv
+../../uvc/wr_ctrl_transaction.sv
+../../uvc/wr_ctrl_sequencer.sv
+../../uvc/wr_ctrl_vsqr.sv
+../../uvc/wr_ctrl_driver.sv
+../../uvc/wr_ctrl_monitor.sv
+../../uvc/wr_ctrl_agent.sv
+../../uvc/wr_ctrl_model.sv
+../../uvc/wr_ctrl_scoreboard.sv
+../../uvc/wr_ctrl_env.sv
+../../uvc/wr_ctrl_base_test.sv
+../../seq_lib/wr_ctrl_case0_sequence.sv
+../../seq_lib/wr_ctrl_case0_vseq.sv

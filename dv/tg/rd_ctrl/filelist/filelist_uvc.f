@@ -1,0 +1,15 @@
+../../uvc/rd_ctrl_package.sv
+../../uvc/rd_ctrl_interface_port.sv
+../../uvc/rd_ctrl_interface_inner.sv
+../../uvc/rd_ctrl_transaction.sv
+../../uvc/rd_ctrl_sequencer.sv
+../../uvc/rd_ctrl_vsqr.sv
+../../uvc/rd_ctrl_driver.sv
+../../uvc/rd_ctrl_monitor.sv
+../../uvc/rd_ctrl_agent.sv
+../../uvc/rd_ctrl_model.sv
+../../uvc/rd_ctrl_scoreboard.sv
+../../uvc/rd_ctrl_env.sv
+../../uvc/rd_ctrl_base_test.sv
+../../seq_lib/rd_ctrl_case0_sequence.sv
+../../seq_lib/rd_ctrl_case0_vseq.sv
