@@ -8,10 +8,10 @@ module wr_ctrl #(
                     input    logic                               clk,
                     input    logic                               rst_n,
 
-                    input    logic                               wr_valid,
-                    output   logic                               wr_ready,
-                    input    logic [addr_width - 1 : 0]          wr_addr,
-                    input    logic [data_width - 1 : 0]          wr_data,
+                    input    logic                               acc_wr_valid,
+                    output   logic                               acc_wr_ready,
+                    input    logic [addr_width - 1 : 0]          acc_wr_addr,
+                    input    logic [data_width - 1 : 0]          acc_wr_data,
 
                     output   logic [addr_width - 1 :0]           acc_index,
                     input    logic [2:0]                         acc_status,
@@ -37,7 +37,7 @@ module wr_ctrl #(
                     input    logic                               fetch_gnt,
                     input    logic                               fetch_done,
 
-                    output   logic  [$clog2(list_depth) + $clog2(list_width) - 1 : 0] mem_waddr,
+                    output   logic  [$clog2(list_depth) + $clog2(list_width) - 1 : 0]  mem_waddr,
                     output   logic                                                     mem_wen,
                     input    logic                                                     mem_wready,
                     output   logic  [data_width - 1 : 0]                               mem_wdata
@@ -57,13 +57,13 @@ typedef enum logic [3:0] {
 
 wr_state_t wr_cs,wr_ns;
 
-logic [addr_width - 1 : 0] wr_addr_ff;
+logic [addr_width - 1 : 0] acc_wr_addr_ff;
 
 logic [addr_width - 1 : 0] local_addr;
 
 logic [data_width - 1 : 0] local_wdata;
 
-logic [data_width - 1 : 0] wr_data_ff;
+logic [data_width - 1 : 0] acc_wr_data_ff;
 
 logic [$clog2(list_depth) - 1 : 0] return_tag_ff;
 
@@ -107,13 +107,13 @@ assign cs_is_wait_fetch_comp = wr_cs == WAIT_FETCH_CMP;
 //3'b010 busy
 //3'b011 done
 
-assign wr_hsked = wr_valid && wr_ready;
+assign wr_hsked = acc_wr_valid && acc_wr_ready;
 
 assign fetch_hsked = fetch_req && fetch_gnt;
 
 assign mem_whsked = mem_wen && mem_wready;
 
-assign wr_ready = (wr_cs == IDLE) || (wr_cs == NORM);
+assign acc_wr_ready = (wr_cs == IDLE) || (wr_cs == NORM);
 
 assign has_comflict = (proc_status_r == 3'b010) && (proc_addr_r == proc_addr_w);
 
@@ -136,17 +136,17 @@ end
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
-        wr_addr_ff <= 0;
+        acc_wr_addr_ff <= 0;
     end else if(wr_hsked) begin
-        wr_addr_ff <= wr_addr;
+        acc_wr_addr_ff <= acc_wr_addr;
     end
 end
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
-        wr_data_ff <= 0;
+        acc_wr_data_ff <= 0;
     end else if(wr_hsked) begin
-        wr_data_ff <= wr_data;
+        acc_wr_data_ff <= acc_wr_data;
     end
 end
 
@@ -167,9 +167,9 @@ always_ff@(posedge clk or negedge rst_n) begin
     end
 end
 
-assign local_addr = wr_hsked ? wr_addr : wr_addr_ff;
+assign local_addr = wr_hsked ? acc_wr_addr : acc_wr_addr_ff;
 
-assign local_wdata = wr_hsked ? wr_data : wr_data_ff;
+assign local_wdata = wr_hsked ? acc_wr_data : acc_wr_data_ff;
 
 assign proc_addr_w = {local_addr[addr_width - 1 : $clog2(list_width)],{$clog2(list_width){1'b0}}};
 
@@ -288,7 +288,7 @@ always_comb begin
         acc_req = 1'b1;
         acc_cmd = 2'b10;
         acc_tag = 0;
-    end else if(cs_is_acc_mem && mem_whsked) begin
+    end else if(cs_is_acc_mem && mem_wready) begin
         acc_req = 1'b1;
         acc_cmd = 2'b11;
         acc_tag = return_tag_ff;

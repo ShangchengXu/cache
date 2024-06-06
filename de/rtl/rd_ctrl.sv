@@ -8,11 +8,11 @@ module rd_ctrl #(
                     input    logic                               clk,
                     input    logic                               rst_n,
 
-                    input    logic                               rd_valid,
-                    output   logic                               rd_ready,
-                    input    logic [addr_width - 1 : 0]          rd_addr,
-                    output   logic [data_width - 1 : 0]          rd_data,
-                    output   logic                               rd_data_valid,
+                    input    logic                               acc_rd_valid,
+                    output   logic                               acc_rd_ready,
+                    input    logic [addr_width - 1 : 0]          acc_rd_addr,
+                    output   logic [data_width - 1 : 0]          acc_rd_data,
+                    output   logic                               acc_rd_data_valid,
 
                     output   logic [addr_width - 1 :0]           acc_index,
                     input    logic [2:0]                         acc_status,
@@ -61,13 +61,9 @@ typedef enum logic [3:0] {
 
 rd_state_t rd_cs,rd_ns;
 
-logic [addr_width - 1 : 0] rd_addr_ff;
+logic [addr_width - 1 : 0] acc_rd_addr_ff;
 
 logic [addr_width - 1 : 0] local_addr;
-
-logic [data_width - 1 : 0] local_wdata;
-
-logic [data_width - 1 : 0] rd_data_ff;
 
 logic [$clog2(list_depth) - 1 : 0] return_tag_ff;
 
@@ -111,13 +107,13 @@ assign cs_is_wait_fetch_comp = rd_cs == WAIT_FETCH_CMP;
 //3'b010 busy
 //3'b011 done
 
-assign rd_hsked = rd_valid && rd_ready;
+assign rd_hsked = acc_rd_valid && acc_rd_ready;
 
 assign fetch_hsked = fetch_req && fetch_gnt;
 
 assign mem_rhsked = mem_ren && mem_rready;
 
-assign rd_ready = (rd_cs == IDLE) || (rd_cs == NORM);
+assign acc_rd_ready = (rd_cs == IDLE) || (rd_cs == NORM);
 
 assign has_comflict = (proc_status_w == 3'b010 || proc_status_w == 3'b001) && (proc_addr_r == proc_addr_w);
 
@@ -138,9 +134,9 @@ end
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
-        rd_addr_ff <= 0;
+        acc_rd_addr_ff <= 0;
     end else if(rd_hsked) begin
-        rd_addr_ff <= rd_addr;
+        acc_rd_addr_ff <= acc_rd_addr;
     end
 end
 
@@ -161,7 +157,7 @@ always_ff@(posedge clk or negedge rst_n) begin
     end
 end
 
-assign local_addr = rd_hsked ? rd_addr : rd_addr_ff;
+assign local_addr = rd_hsked ? acc_rd_addr : acc_rd_addr_ff;
 
 
 assign proc_addr_r = {local_addr[addr_width - 1 : $clog2(list_width)],{$clog2(list_width){1'b0}}};
@@ -280,7 +276,7 @@ always_comb begin
         acc_req = 1'b1;
         acc_cmd = 2'b10;
         acc_tag = 0;
-    end else if(cs_is_acc_mem && mem_rhsked) begin
+    end else if(cs_is_acc_mem && mem_rready) begin
         acc_req = 1'b1;
         acc_cmd = 2'b11;
         acc_tag = return_tag_ff;
@@ -302,9 +298,9 @@ always_comb begin
     end
 end
 
-assign rd_data = mem_rdata;
+assign acc_rd_data = mem_rdata;
 
-assign rd_data_valid = mem_rdata_valid;
+assign acc_rd_data_valid = mem_rdata_valid;
 
 
 //acc status

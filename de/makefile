@@ -1,8 +1,8 @@
 rtl_path = "./rtl/"
 cmd = "inst"
 name = ""
-sp = ""
-tp = ""
+sp = "./rtl/top/cache_ctrl.pv"
+tp = "./rtl/top/cache_ctrl.sv"
 fp = ""
 inst:
 	python ${PYTOOLS_HOME}/main.py -c inst -n ${name} -e 

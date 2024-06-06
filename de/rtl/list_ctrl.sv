@@ -142,7 +142,7 @@ always_comb begin
             return_tag_1 = lru_list.tail;
         end
     end else if(acc_req_1 && acc_cmd_1 == 2'b00 && acc_hit_1) begin
-        return_tag_0 = hit_tag_1;
+        return_tag_1 = hit_tag_1;
     end
 end
 
