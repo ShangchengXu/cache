@@ -12,6 +12,7 @@ module list_ctrl
                 input  logic [1:0]                         acc_cmd_0,
                 input  logic [$clog2(lists_depth) - 1 : 0] acc_tag_0,
                 output logic [$clog2(lists_depth) - 1 : 0] return_tag_0,
+                output logic [index_lenth         - 1 : 0] return_index_0,
                 input  logic                               acc_req_0,
 
 
@@ -21,6 +22,7 @@ module list_ctrl
                 input  logic [1:0]                         acc_cmd_1,
                 input  logic [$clog2(lists_depth) - 1 : 0] acc_tag_1,
                 output logic [$clog2(lists_depth) - 1 : 0] return_tag_1,
+                output logic [index_lenth         - 1 : 0] return_index_1,
                 input  logic                               acc_req_1
             );
 
@@ -472,19 +474,25 @@ endgenerate
 
 always_comb begin
     acc_status_0 = 2'b00;
+    return_index_0 = 0;
     if((acc_cmd_0 == 2'b00 || acc_cmd_0 == 2'b01) && acc_hit_0) begin
         acc_status_0 = tag_table[hit_tag_0].status;
+        return_index_0 = tag_table[hit_tag_0].index;
     end else if(acc_cmd_0 == 2'b10 && acc_req_0) begin
         acc_status_0 = tag_table[return_tag_0].status;
+        return_index_0 = tag_table[return_tag_0].index;
     end
 end
 
 always_comb begin
     acc_status_1 = 2'b00;
+    return_index_1 = 0;
     if((acc_cmd_1 == 2'b00 || acc_cmd_1 == 2'b01) && acc_hit_1) begin
         acc_status_1 = tag_table[hit_tag_1].status;
+        return_index_1 = tag_table[hit_tag_1].index;
     end else if(acc_cmd_1 == 2'b10 && acc_req_1) begin
         acc_status_1 = tag_table[return_tag_1].status;
+        return_index_1 = tag_table[return_tag_1].index;
     end
 end
 

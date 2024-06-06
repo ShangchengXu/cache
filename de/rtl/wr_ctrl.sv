@@ -16,8 +16,9 @@ module wr_ctrl #(
                     output   logic [addr_width - 1 :0]           acc_index,
                     input    logic [2:0]                         acc_status,
                     output   logic [1:0]                         acc_cmd,
-                    output   logic [$clog2(list_depth) - 1 : 0] acc_tag,
-                    input    logic [$clog2(list_depth) - 1 : 0] return_tag,
+                    output   logic [$clog2(list_depth) - 1 : 0]  acc_tag,
+                    input    logic [$clog2(list_depth) - 1 : 0]  return_tag,
+                    input    logic [addr_width - 1 :0]           return_index,
                     output   logic                               acc_req,
 
 
@@ -32,6 +33,7 @@ module wr_ctrl #(
                     output   logic                               fetch_req,
                     output   logic [$clog2(list_depth) - 1 : 0]  fetch_tag,
                     output   logic [addr_width - 1 : 0]          fetch_addr,
+                    output   logic [addr_width - 1 : 0]          fetch_addr_pre,
                     input    logic                               fetch_gnt,
                     input    logic                               fetch_done,
 
@@ -68,6 +70,8 @@ logic [$clog2(list_depth) - 1 : 0] return_tag_ff;
 logic wr_hsked;
 
 logic fetch_hsked;
+
+logic [addr_width - 1 :0]  return_index_ff;
 
 logic mem_whsked;
 
@@ -152,6 +156,14 @@ always_ff@(posedge clk or negedge rst_n) begin
         return_tag_ff <= 0;
     end else if(cs_is_allocate_line || wr_hsked) begin
         return_tag_ff <= return_tag;
+    end
+end
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        return_index_ff <= 0;
+    end else if(cs_is_allocate_line) begin
+        return_index_ff <= return_index;
     end
 end
 
@@ -258,6 +270,8 @@ end
 assign fetch_req = cs_is_fetch_req;
 
 assign fetch_addr = proc_addr_w;
+
+assign fetch_addr_pre = return_index_ff;
 
 assign fetch_tag = return_tag_ff;
 

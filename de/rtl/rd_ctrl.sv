@@ -17,8 +17,9 @@ module rd_ctrl #(
                     output   logic [addr_width - 1 :0]           acc_index,
                     input    logic [2:0]                         acc_status,
                     output   logic [1:0]                         acc_cmd,
-                    output   logic [$clog2(list_depth) - 1 : 0] acc_tag,
-                    input    logic [$clog2(list_depth) - 1 : 0] return_tag,
+                    output   logic [$clog2(list_depth) - 1 : 0]  acc_tag,
+                    input    logic [$clog2(list_depth) - 1 : 0]  return_tag,
+                    input    logic [addr_width - 1 :0]           return_index,
                     output   logic                               acc_req,
 
 
@@ -33,6 +34,7 @@ module rd_ctrl #(
                     output   logic                               fetch_req,
                     output   logic [$clog2(list_depth) - 1 : 0]  fetch_tag,
                     output   logic [addr_width - 1 : 0]          fetch_addr,
+                    output   logic [addr_width - 1 : 0]          fetch_addr_pre,
                     input    logic                               fetch_gnt,
                     input    logic                               fetch_done,
 
@@ -68,6 +70,8 @@ logic [data_width - 1 : 0] local_wdata;
 logic [data_width - 1 : 0] rd_data_ff;
 
 logic [$clog2(list_depth) - 1 : 0] return_tag_ff;
+
+logic [addr_width - 1 :0]           return_index_ff;
 
 logic rd_hsked;
 
@@ -146,6 +150,14 @@ always_ff@(posedge clk or negedge rst_n) begin
         return_tag_ff <= 0;
     end else if(cs_is_allocate_line || rd_hsked) begin
         return_tag_ff <= return_tag;
+    end
+end
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        return_index_ff <= 0;
+    end else if(cs_is_allocate_line) begin
+        return_index_ff <= return_index;
     end
 end
 
@@ -254,6 +266,7 @@ assign fetch_addr = proc_addr_r;
 
 assign fetch_tag = return_tag_ff;
 
+assign fetch_addr_pre = return_index_ff;
 
 always_comb begin
     acc_req = 1'b0;
