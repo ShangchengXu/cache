@@ -36,19 +36,19 @@ set current_design $top_design
 
 set clk_src(clk) [get_ports clk]
 
-set Period(300M) [expr 1000/300]
+set Period(300M) [expr 1000/600]
 
-create_clock  -name clk -period $Period(300M) [get_port clk] $clk_src(clk)
+create_clock  -name clk -period $Period(300M)  $clk_src(clk)
 
 set input_ports_grp(clk) [all_inputs]
 
 set output_ports_grp(clk) [all_outputs]
 
-set_input_delay -max [$Period(clk) * 0.6] -clock [get_clock clk] [remove_from_collection [all_inputs] [get_ports clk]]
-set_input_delay -min [$Period(clk) * 0.0] -clock [get_clock clk] [remove_from_collection [all_inputs] [get_ports clk]]
+set_input_delay -max [$Period(clk) * 0.6] -clock $clk_src(clk) [remove_from_collection [all_inputs] [get_ports clk]]
+set_input_delay -min [$Period(clk) * 0.0] -clock $clk_src(clk) [remove_from_collection [all_inputs] [get_ports clk]]
 
-set_output_delay -max [$Period(clk) * 0.6] -clock [get_clock clk] [all_outputs]
-set_output_delay -max [$Period(clk) * 0.0] -clock [get_clock clk] [all_outputs]
+set_output_delay -max [$Period(clk) * 0.6] -clock $clk_src(clk) [all_outputs]
+set_output_delay -min [$Period(clk) * 0.0] -clock $clk_src(clk) [all_outputs]
 
 
 set_operating_conditions ss_cworst_max_0p81v_125c
@@ -116,7 +116,7 @@ if { $insert_CG } {
 }
 
 report_constraint -all_violators -verbose > $report_path/report_constraint.rpt
-report_timing            > $report_path/report_timing.rpt
+report_timing -max_path 10            > $report_path/report_timing.rpt
 report_timing -delay max -max_path 10 > $report_path/timing_setup.rpt
 report_timing -delay min -max_path 10 > $report_path/timing_hold.rpt
 report_area              > $report_path/report_area.rpt

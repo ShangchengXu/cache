@@ -331,6 +331,8 @@ assign fetch_mem_raddr = {local_tag,wr_cnt};
 
 assign fetch_mem_wen = rd_valid;
 
+assign fetch_mem_wdata = rd_data;
+
 assign rd_ready = fetch_mem_wready;
 
 assign fetch_mem_ren = (wr_cs == WR_DATA && !wr_last) && (!wr_valid || wr_data_hsked);
@@ -368,5 +370,6 @@ end
 
 assign fetch_done_w = main_cs == DONE && local_owner == 2'b00;
 assign fetch_done_r = main_cs == DONE && local_owner == 2'b01;
+
 
 endmodule
