@@ -6,7 +6,7 @@ class cache_ctrl_case0_sequence extends uvm_sequence #(uvm_sequence_item);
    endfunction 
    
    virtual task body();
-      repeat (10) begin
+      repeat (100) begin
          `uvm_do(m_trans)
       end
    endtask

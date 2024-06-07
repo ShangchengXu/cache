@@ -23,6 +23,8 @@ endclass
 
 task cache_ctrl_driver1::main_phase(uvm_phase phase);
    cache_ctrl_transaction tr;
+   logic [31:0] temp_addr;
+   int index;
    vif.acc_wr_valid <= 1'b0;
    vif.acc_wr_data <= 0;
    vif.acc_wr_addr <= 0;
@@ -40,8 +42,14 @@ task cache_ctrl_driver1::main_phase(uvm_phase phase);
    while(1) begin
       @(posedge vif.clk);
       if(vif.wr_req &&  vif.wr_gnt) begin
-         for(int i = 0 ; i < 51; i++) begin
-            if(i == 50) begin
+         temp_addr = (vif.wr_addr)/4;
+         index = 0;
+         for(int i = 0 ; i < 50; i++) begin
+            if(vif.wr_valid) begin
+               memory::mem[temp_addr + index] = vif.wr_data;
+               index = index + 1;
+            end
+            if(i == 49) begin
                vif.wr_done <= 1'b1;
             end
             @(posedge vif.clk);
@@ -66,7 +74,7 @@ task cache_ctrl_driver1::drive_one_pkt(cache_ctrl_transaction tr);
          break;
       end
    end
-   vif.wr_valid <= 1'b0;
+   vif.acc_wr_valid <= 1'b0;
 
    // `uvm_info("cache_ctrl_driver", "end drive one pkt", UVM_LOW);
 endtask

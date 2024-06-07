@@ -23,11 +23,15 @@ module rd_ctrl #(
                     output   logic                               acc_req,
 
 
+                    input    logic                               allocate_busy,
+
                     output   logic [2:0]                         proc_status_r,
                     output   logic [addr_width - 1 : 0]          proc_addr_r,
+                    output   logic [$clog2(list_depth) - 1 : 0]  proc_tag_r,
 
                     input    logic [2:0]                         proc_status_w,
                     input    logic [addr_width - 1 : 0]          proc_addr_w,
+                    input    logic [$clog2(list_depth) - 1 : 0]  proc_tag_w,
 
 
                     output   logic [1:0]                         fetch_cmd,
@@ -46,6 +50,7 @@ module rd_ctrl #(
                 );
 
 
+localparam addr_offset_width = $clog2(list_width * data_width / 8);
 
 typedef enum logic [3:0] { 
         IDLE,
@@ -111,6 +116,7 @@ assign rd_hsked = acc_rd_valid && acc_rd_ready;
 
 assign fetch_hsked = fetch_req && fetch_gnt;
 
+
 assign mem_rhsked = mem_ren && mem_rready;
 
 assign acc_rd_ready = (rd_cs == IDLE) || (rd_cs == NORM);
@@ -131,6 +137,7 @@ always_comb begin
     end
 end
 
+assign proc_tag_r = cs_is_allocate_line && !allocate_busy ? return_tag : return_tag_ff;
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
@@ -144,6 +151,8 @@ end
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         return_tag_ff <= 0;
+    end else if(rd_cs == WAIT_COMFLICT && rd_ns != WAIT_COMFLICT) begin
+        return_tag_ff <= proc_tag_w;
     end else if(cs_is_allocate_line || rd_hsked) begin
         return_tag_ff <= return_tag;
     end
@@ -160,7 +169,7 @@ end
 assign local_addr = rd_hsked ? acc_rd_addr : acc_rd_addr_ff;
 
 
-assign proc_addr_r = {local_addr[addr_width - 1 : $clog2(list_width)],{$clog2(list_width){1'b0}}};
+assign proc_addr_r = {local_addr[addr_width - 1 : addr_offset_width],{addr_offset_width{1'b0}}};
 
 assign acc_index = proc_addr_r;
 
@@ -221,7 +230,11 @@ always_comb begin:RD_FSM
         end
 
         ALLOCATE_LINE: begin
-            rd_ns = FETCH_REQ;
+            if(!allocate_busy) begin
+                rd_ns = FETCH_REQ;
+            end else begin
+                rd_ns = ALLOCATE_LINE;
+            end
         end
 
         FETCH_REQ: begin
@@ -290,15 +303,15 @@ end
 always_comb begin
     mem_ren = 1'b0;
     mem_raddr = 0;
-    if(rd_hsked && acc_status == 3'b001) begin
+    if(rd_hsked && (acc_status == 3'b001 || acc_status == 3'b010)) begin
             mem_ren = 1'b1;
-            mem_raddr = {return_tag,local_addr[$clog2(list_width) - 1 : 0]};
+            mem_raddr = {return_tag,local_addr[addr_offset_width - 1 : 2]};
     end else if(rd_cs == WAIT_MEM) begin
             mem_ren = 1'b1;
-            mem_raddr = {return_tag_ff,local_addr[$clog2(list_width) - 1 : 0]};
+            mem_raddr = {return_tag_ff,local_addr[addr_offset_width - 1 : 2]};
     end else if(cs_is_acc_mem) begin
             mem_ren = 1'b1;
-            mem_raddr = {return_tag_ff,local_addr[$clog2(list_width) - 1 : 0]};
+            mem_raddr = {return_tag_ff,local_addr[addr_offset_width - 1 : 2]};
     end
 end
 

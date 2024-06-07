@@ -55,8 +55,10 @@ logic [addr_width - 1 :0]                               return_index_0        ;
 logic                                                   acc_req_0             ;
 logic [2:0]                                             proc_status_w         ;
 logic [addr_width - 1 : 0]                              proc_addr_w           ;
+logic [$clog2(list_depth) - 1 : 0]                      proc_tag_w            ;
 logic [2:0]                                             proc_status_r         ;
 logic [addr_width - 1 : 0]                              proc_addr_r           ;
+logic [$clog2(list_depth) - 1 : 0]                      proc_tag_r            ;
 logic [$clog2(list_depth) + $clog2(list_width) - 1 : 0] mem_waddr             ;
 logic                                                   mem_wen               ;
 logic                                                   mem_wready            ;
@@ -153,6 +155,8 @@ rd_ctrl #(
         .acc_req            (acc_req_1          ) ,//output  
         .proc_status_r      (proc_status_r      ) ,//output  [2:0]
         .proc_addr_r        (proc_addr_r        ) ,//output  [addr_width - 1 : 0]
+        .proc_tag_r         (proc_tag_r         ) ,//output  [$ - 1 : 0]
+        .proc_tag_w         (proc_tag_w         ) ,//output  [$ - 1 : 0]
         .proc_status_w      (proc_status_w      ) ,//input   [2:0]
         .proc_addr_w        (proc_addr_w        ) ,//input   [addr_width - 1 : 0]
         .fetch_cmd          (fetch_cmd_r        ) ,//output  [1:0]
@@ -190,6 +194,8 @@ wr_ctrl #(
         .proc_status_w   (proc_status_w     ) ,//output  [2:0]
         .proc_addr_w     (proc_addr_w       ) ,//output  [addr_width - 1 : 0]
         .proc_status_r   (proc_status_r     ) ,//input   [2:0]
+        .proc_tag_r      (proc_tag_r        ) ,//output  [$ - 1 : 0]
+        .proc_tag_w      (proc_tag_w        ) ,//output  [$ - 1 : 0]
         .proc_addr_r     (proc_addr_r       ) ,//input   [addr_width - 1 : 0]
         .fetch_cmd       (fetch_cmd_w       ) ,//output  [1:0]
         .fetch_req       (fetch_req_w       ) ,//output  

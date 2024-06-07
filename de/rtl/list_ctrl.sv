@@ -15,6 +15,8 @@ module list_ctrl
                 output logic [index_lenth         - 1 : 0] return_index_0,
                 input  logic                               acc_req_0,
 
+                output logic                               allocate_busy,
+
 
                 // port1
                 input  logic [index_lenth - 1 :0]          acc_index_1,
@@ -67,6 +69,15 @@ tag_table_t tag_table[lists_depth];
 //when allocate
 // 3'b000 : allocate new line
 
+always_comb begin
+    if(!free_list.empty) begin
+        allocate_busy = 1'b0;
+    end else if(tag_table[lru_list.tail].status[2]) begin
+        allocate_busy = 1'b1;
+    end else begin
+        allocate_busy = 1'b0;
+    end
+end
 
 always_comb begin
     hit_tag_0 = 0;
@@ -154,7 +165,7 @@ always_ff@(posedge clk or negedge rst_n) begin
         lru_list.length <= 0;
         free_list.head <= 0;
         free_list.tail <= lists_depth - 1;
-        free_list.length <= 0;
+        free_list.length <= lists_depth;
     end else if(allocate_0 && allocate_1 && !lru_list.empty) begin
         lru_list.head <= return_tag_0;
         lru_list.length <= lru_list.length + 2;
@@ -256,6 +267,8 @@ always_ff@(posedge clk or negedge rst_n) begin
                 lru_list.head <= proc_tag_1;
         end
     end else if(allocate_0) begin
+        free_list.length <= free_list.length - 1;
+        free_list.tail <= tag_table[free_list.tail].pre_tag;
         if(!lru_list.empty) begin
             lru_list.head <= return_tag_0;
             lru_list.length <= lru_list.length + 1;
@@ -265,6 +278,8 @@ always_ff@(posedge clk or negedge rst_n) begin
             lru_list.length <= lru_list.length + 1;
         end
     end else if(allocate_1) begin
+        free_list.length <= free_list.length - 1;
+        free_list.tail <= tag_table[free_list.tail].pre_tag;
         if(!lru_list.empty) begin
             lru_list.head <= return_tag_1;
             lru_list.length <= lru_list.length + 1;

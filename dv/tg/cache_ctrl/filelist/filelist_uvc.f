@@ -1,3 +1,4 @@
+../../uvc/memory.sv
 ../../uvc/cache_ctrl_package.sv
 ../../uvc/cache_ctrl_interface_port.sv
 ../../uvc/cache_ctrl_interface_inner.sv

@@ -28,33 +28,50 @@ endclass
 
 task cache_ctrl_monitor::main_phase(uvm_phase phase);
    cache_ctrl_transaction tr;
+   cache_ctrl_transaction tr1;
    //------------forever------//
-   // while(1) begin
-      // if(is_active == UVM_ACTIVE) begin
-      //    tr = new("tr");
-      //    collect_one_pkt_drv(tr);
-      //    ap.write(tr);
-      // end
-      // else begin
-      //    tr = new("tr");
-      //    collect_one_pkt_mon(tr);
-      //    ap.write(tr);
-      // end
-   // end
-
-   //------------repeat-------//
-   repeat(1) begin
+   while(1) begin
       if(is_active == UVM_ACTIVE) begin
-         tr = new("tr");
-         collect_one_pkt_drv(tr);
-         ap.write(tr);
+         @(posedge vif.clk) ;
+         if(vif.acc_wr_valid && vif.acc_wr_ready) begin
+            tr1 = new("tr1");
+            tr1.req = 1'b0;
+            tr1.addr = vif.acc_wr_addr;
+            tr1.wr_data = vif.acc_wr_data;
+            ap.write(tr1);
+         end
+         if(vif.acc_rd_valid && vif.acc_rd_ready) begin
+            tr = new("tr");
+            tr.req = 1'b1;
+            tr.addr = vif.acc_rd_addr;
+            ap.write(tr);
+         end
       end
       else begin
-         tr = new("tr");
-         collect_one_pkt_mon(tr);
-         ap.write(tr);
+         @(posedge vif.clk) ;
+         if(vif.acc_rd_data_valid) begin
+            tr1 = new("tr1");
+            tr1.req = 1'b1;
+            tr1.addr = 0;
+            tr1.rd_data = vif.acc_rd_data;
+            ap.write(tr1);
+         end
       end
    end
+
+   //------------repeat-------//
+   // repeat(1) begin
+   //    if(is_active == UVM_ACTIVE) begin
+   //       tr = new("tr");
+   //       collect_one_pkt_drv(tr);
+   //       ap.write(tr);
+   //    end
+   //    else begin
+   //       tr = new("tr");
+   //       collect_one_pkt_mon(tr);
+   //       ap.write(tr);
+   //    end
+   // end
 
 
 endtask

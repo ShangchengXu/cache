@@ -96,6 +96,7 @@ typedef enum logic [3:0] {
         RD_IDLE,
         RD_REQ,
         RD_WAIT_DONE,
+        RD_WAIT_WR,
         RD_DONE
 } rd_state_t;
 rd_state_t rd_cs,rd_ns;
@@ -225,10 +226,20 @@ always_comb begin:RD_FSM
     case(rd_cs) 
 
     RD_IDLE:begin
-        if(main_cs == REQ) begin
+        if(main_cs == REQ && main_ns == WAIT_RD_DONE) begin
             rd_ns = RD_REQ;
+        end else if(main_cs == REQ && main_ns == WAIT_WR_RD_DONE) begin
+            rd_ns = RD_WAIT_WR;
         end else begin
             rd_ns = RD_IDLE;
+        end
+    end
+
+    RD_WAIT_WR: begin
+        if(wr_last && wr_data_hsked) begin
+            rd_ns = RD_REQ;
+        end else begin
+            rd_ns = RD_WAIT_WR;
         end
     end
 
@@ -336,7 +347,15 @@ assign rd_ready = fetch_mem_wready;
 
 assign fetch_mem_ren = (wr_cs == WR_DATA && !wr_last) && (!wr_valid || wr_data_hsked);
 
-assign wr_last = wr_cnt == $clog2(list_width) - 1 ;
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        wr_last <= 1'b0;
+    end else if((wr_cs == WR_DATA) && (wr_cnt == list_width - 1)) begin
+        wr_last <= 1'b1;
+    end else if(wr_data_hsked) begin
+        wr_last <= 1'b0;
+    end
+end
 
 assign wr_valid = fetch_mem_rdata_valid;
 
@@ -358,7 +377,7 @@ always_comb  begin
     if(fetch_req_w) begin
         fetch_gnt_w = main_cs == IDLE;
         fetch_gnt_r = 1'b0;
-    end else if(fetch_addr_r) begin
+    end else if(fetch_req_r) begin
         fetch_gnt_r = main_cs == IDLE;
         fetch_gnt_w = 1'b0;
     end else begin

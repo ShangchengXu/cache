@@ -20,6 +20,7 @@ class cache_ctrl_env extends uvm_env;
       mst_agt1 = cache_ctrl_agent1::type_id::create("mst_agt1", this);
       slv_agt = cache_ctrl_agent::type_id::create("slv_agt", this);
       mst_agt.is_active = UVM_ACTIVE;
+      mst_agt1.is_active = UVM_ACTIVE;
       slv_agt.is_active = UVM_PASSIVE;
       mdl = cache_ctrl_model::type_id::create("mdl", this);
       scb = cache_ctrl_scoreboard::type_id::create("scb", this);

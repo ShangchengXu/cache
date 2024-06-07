@@ -23,6 +23,7 @@ endclass
 
 task cache_ctrl_driver::main_phase(uvm_phase phase);
    cache_ctrl_transaction tr;
+   logic [31:0] temp_addr;
    vif.acc_rd_valid <= 1'b0;
    vif.acc_rd_addr <= 0;
    vif.rd_gnt <= 1'b1;
@@ -39,8 +40,9 @@ task cache_ctrl_driver::main_phase(uvm_phase phase);
    while(1) begin
       @(posedge vif.clk);
       if(vif.rd_req &&  vif.rd_gnt) begin
+         temp_addr = (vif.rd_addr)/4;
          for(int i = 0 ; i < 32; i++) begin
-            vif.rd_data <= $random();
+            vif.rd_data <= memory::mem[temp_addr + i];
             vif.rd_valid <= 1'b1;
             if(i == 31) begin
                vif.rd_done <= 1'b1;
@@ -65,7 +67,7 @@ task cache_ctrl_driver::drive_one_pkt(cache_ctrl_transaction tr);
          break;
       end
    end
-   vif.rd_valid <= 1'b0;
+   vif.acc_rd_valid <= 1'b0;
 
    // `uvm_info("cache_ctrl_driver", "end drive one pkt", UVM_LOW);
 endtask

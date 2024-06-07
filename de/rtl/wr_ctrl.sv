@@ -21,12 +21,15 @@ module wr_ctrl #(
                     input    logic [addr_width - 1 :0]           return_index,
                     output   logic                               acc_req,
 
+                    input    logic                               allocate_busy,
 
                     output   logic [2:0]                         proc_status_w,
                     output   logic [addr_width - 1 : 0]          proc_addr_w,
+                    output   logic [$clog2(list_depth) - 1 : 0]  proc_tag_w,
 
                     input    logic [2:0]                         proc_status_r,
                     input    logic [addr_width - 1 : 0]          proc_addr_r,
+                    input    logic [$clog2(list_depth) - 1 : 0]  proc_tag_r,
 
 
                     output   logic [1:0]                         fetch_cmd,
@@ -56,6 +59,8 @@ typedef enum logic [3:0] {
 } wr_state_t;
 
 wr_state_t wr_cs,wr_ns;
+
+localparam addr_offset_width = $clog2(list_width * data_width / 8);
 
 logic [addr_width - 1 : 0] acc_wr_addr_ff;
 
@@ -88,6 +93,8 @@ logic cs_is_fetch_req;
 logic cs_is_wait_fetch_comp;
 
 logic cs_is_acc_mem;
+
+logic fetch_proc;
 
 assign cs_is_acc_mem = wr_cs == ACC_MEM;
 
@@ -133,6 +140,18 @@ always_comb begin
     end
 end
 
+assign proc_tag_w = cs_is_allocate_line && !allocate_busy ? return_tag : return_tag_ff;
+
+always@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        fetch_proc <= 1'b0;
+    end else if(cs_is_fetch_req) begin
+        fetch_proc <= 1'b1;
+    end else if(cs_is_acc_mem && fetch_proc) begin
+        fetch_proc <= 1'b0;
+    end
+end
+
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
@@ -154,7 +173,9 @@ end
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         return_tag_ff <= 0;
-    end else if(cs_is_allocate_line || wr_hsked) begin
+    end else if(wr_cs == WAIT_COMFLICT && wr_ns != WAIT_COMFLICT)begin
+        return_tag_ff <= proc_tag_r;
+    end else if((cs_is_allocate_line && !allocate_busy) || wr_hsked) begin
         return_tag_ff <= return_tag;
     end
 end
@@ -162,7 +183,7 @@ end
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         return_index_ff <= 0;
-    end else if(cs_is_allocate_line) begin
+    end else if(cs_is_allocate_line && !allocate_busy) begin
         return_index_ff <= return_index;
     end
 end
@@ -171,7 +192,7 @@ assign local_addr = wr_hsked ? acc_wr_addr : acc_wr_addr_ff;
 
 assign local_wdata = wr_hsked ? acc_wr_data : acc_wr_data_ff;
 
-assign proc_addr_w = {local_addr[addr_width - 1 : $clog2(list_width)],{$clog2(list_width){1'b0}}};
+assign proc_addr_w = {local_addr[addr_width - 1 : addr_offset_width],{addr_offset_width{1'b0}}};
 
 assign acc_index = proc_addr_w;
 
@@ -248,7 +269,11 @@ always_comb begin:WR_FSM
         end
 
         ALLOCATE_LINE: begin
-            wr_ns = FETCH_REQ;
+            if(!allocate_busy) begin
+                wr_ns = FETCH_REQ;
+            end else begin
+                wr_ns = ALLOCATE_LINE;
+            end
         end
 
         ACC_MEM: begin
@@ -288,11 +313,11 @@ always_comb begin
         acc_req = 1'b1;
         acc_cmd = 2'b00;
         acc_tag = 0;
-    end else if(cs_is_allocate_line) begin
+    end else if(cs_is_allocate_line && !allocate_busy) begin
         acc_req = 1'b1;
         acc_cmd = 2'b10;
         acc_tag = 0;
-    end else if(cs_is_acc_mem && mem_wready) begin
+    end else if(cs_is_acc_mem && mem_wready && fetch_proc) begin
         acc_req = 1'b1;
         acc_cmd = 2'b11;
         acc_tag = return_tag_ff;
@@ -304,15 +329,15 @@ assign mem_wdata = local_wdata;
 always_comb begin
     mem_wen = 1'b0;
     mem_waddr = 0;
-    if(wr_hsked && acc_status == 3'b001) begin
+    if(wr_hsked && (acc_status == 3'b001 || acc_status == 3'b010)) begin
             mem_wen = 1'b1;
-            mem_waddr = {return_tag,local_addr[$clog2(list_width) - 1 : 0]};
+            mem_waddr = {return_tag,local_addr[addr_offset_width - 1 : 2]};
     end else if(wr_cs == WAIT_MEM) begin
             mem_wen = 1'b1;
-            mem_waddr = {return_tag_ff,local_addr[$clog2(list_width) - 1 : 0]};
+            mem_waddr = {return_tag_ff,local_addr[addr_offset_width - 1 : 2]};
     end else if(cs_is_acc_mem) begin
             mem_wen = 1'b1;
-            mem_waddr = {return_tag_ff,local_addr[$clog2(list_width) - 1 : 0]};
+            mem_waddr = {return_tag_ff,local_addr[addr_offset_width - 1 : 2]};
     end
 end
 
@@ -323,7 +348,7 @@ end
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         fetch_cmd <= 2'b0;
-    end else if(cs_is_allocate_line) begin
+    end else if(cs_is_allocate_line && !allocate_busy) begin
         fetch_cmd <= acc_status;
     end
 end
