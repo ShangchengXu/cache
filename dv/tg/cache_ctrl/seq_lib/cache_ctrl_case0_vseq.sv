@@ -10,8 +10,13 @@ class cache_ctrl_case0_vseq extends uvm_sequence;
    
    virtual task body();
       cache_ctrl_case0_sequence dseq;
+      cache_ctrl_case0_sequence dseq1;
       dseq = cache_ctrl_case0_sequence::type_id::create("dseq");
-      dseq.start(p_sequencer.sqr0);
+      dseq1 = cache_ctrl_case0_sequence::type_id::create("dseq1");
+      fork
+         dseq.start(p_sequencer.sqr0);
+         dseq1.start(p_sequencer.sqr1);
+      join
       
    endtask
 

@@ -1,4 +1,4 @@
-sim_opts = " +vcs+lic+wait  +fsdb+all=on  +fsdbfile+hw.fsdb   -l sim.log"
+sim_opts = " +vcs+lic+wait  +fsdb+all=on +fsdb+delta  +fsdbfile+hw.fsdb   -l sim.log"
 # sim_opts = "../../build/simv +vcs+lic+wait  +fsdb+all=on  +fsdbfile+hw.fsdb   -l sim.log"
 
 lists = {

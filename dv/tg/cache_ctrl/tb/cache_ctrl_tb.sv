@@ -77,8 +77,10 @@ end
 
 initial begin
    uvm_config_db#(virtual cache_ctrl_interface_port)::set(null, "uvm_test_top.env.mst_agt.drv", "vif", ifo);
+   uvm_config_db#(virtual cache_ctrl_interface_port)::set(null, "uvm_test_top.env.mst_agt1.drv", "vif", ifo);
    uvm_config_db#(virtual cache_ctrl_interface_port)::set(null, "uvm_test_top.env.mst_agt.mon", "vif", ifo);
    uvm_config_db#(virtual cache_ctrl_interface_port)::set(null, "uvm_test_top.env.slv_agt.mon", "vif", ifo);
+   uvm_config_db#(virtual cache_ctrl_interface_inner)::set(null, "uvm_test_top.env.mst_agt1.drv", "vif_i", ifi);
    uvm_config_db#(virtual cache_ctrl_interface_inner)::set(null, "uvm_test_top.env.mst_agt.drv", "vif_i", ifi);
    uvm_config_db#(virtual cache_ctrl_interface_inner)::set(null, "uvm_test_top.env.mst_agt.mon", "vif_i", ifi);
    uvm_config_db#(virtual cache_ctrl_interface_inner)::set(null, "uvm_test_top.env.slv_agt.mon", "vif_i", ifi);

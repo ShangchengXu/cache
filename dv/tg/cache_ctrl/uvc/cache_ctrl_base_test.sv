@@ -27,6 +27,7 @@ endfunction
 function void cache_ctrl_base_test::connect_phase(uvm_phase phase);
    super.connect_phase(phase);
    vsqr.sqr0 = env.mst_agt.sqr;
+   vsqr.sqr1 = env.mst_agt1.sqr;
 endfunction
 
 

@@ -1,6 +1,7 @@
 class cache_ctrl_env extends uvm_env;
 
    cache_ctrl_agent   mst_agt;
+   cache_ctrl_agent1  mst_agt1;
    cache_ctrl_agent   slv_agt;
    cache_ctrl_model   mdl;
    cache_ctrl_scoreboard scb;
@@ -16,6 +17,7 @@ class cache_ctrl_env extends uvm_env;
    virtual function void build_phase(uvm_phase phase);
       super.build_phase(phase);
       mst_agt = cache_ctrl_agent::type_id::create("mst_agt", this);
+      mst_agt1 = cache_ctrl_agent1::type_id::create("mst_agt1", this);
       slv_agt = cache_ctrl_agent::type_id::create("slv_agt", this);
       mst_agt.is_active = UVM_ACTIVE;
       slv_agt.is_active = UVM_PASSIVE;

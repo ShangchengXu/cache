@@ -174,7 +174,7 @@ always_comb begin:MAIN_FSM
     end
 
     REQ: begin
-        if(local_cmd == 2'b01) begin
+        if(local_cmd == 2'b01 || local_cmd == 2'b00) begin
             main_ns = WAIT_RD_DONE;
         end else if(local_cmd == 2'b10) begin
             main_ns = WAIT_WR_RD_DONE;
@@ -257,7 +257,6 @@ always_comb begin:RD_FSM
     endcase
 end
 
-
 always_comb begin:WR_FSM
     wr_ns = wr_cs;
 
@@ -282,7 +281,7 @@ always_comb begin:WR_FSM
         WR_DATA: begin
             if(wr_last && wr_data_hsked) begin
                 wr_ns = WR_WAIT_DONE;
-            end begin
+            end else begin
                 wr_ns = WR_DATA;
             end
         end
@@ -368,8 +367,8 @@ always_comb  begin
     end
 end
 
-assign fetch_done_w = main_cs == DONE && local_owner == 2'b00;
-assign fetch_done_r = main_cs == DONE && local_owner == 2'b01;
+assign fetch_done_w = local_done && local_owner == 2'b00;
+assign fetch_done_r = local_done && local_owner == 2'b01;
 
 
 endmodule

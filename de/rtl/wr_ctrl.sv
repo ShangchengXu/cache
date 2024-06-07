@@ -183,7 +183,7 @@ always_ff@(posedge clk or negedge rst_n) begin
     end
 end
 
-always_comb begin
+always_comb begin:WR_FSM
     wr_ns = wr_cs;
     case(wr_cs)
 
@@ -245,6 +245,10 @@ always_comb begin
             end else begin
                 wr_ns = WAIT_FETCH_CMP;
             end
+        end
+
+        ALLOCATE_LINE: begin
+            wr_ns = FETCH_REQ;
         end
 
         ACC_MEM: begin

@@ -5,8 +5,10 @@
 ../../uvc/cache_ctrl_sequencer.sv
 ../../uvc/cache_ctrl_vsqr.sv
 ../../uvc/cache_ctrl_driver.sv
+../../uvc/cache_ctrl_driver1.sv
 ../../uvc/cache_ctrl_monitor.sv
 ../../uvc/cache_ctrl_agent.sv
+../../uvc/cache_ctrl_agent1.sv
 ../../uvc/cache_ctrl_model.sv
 ../../uvc/cache_ctrl_scoreboard.sv
 ../../uvc/cache_ctrl_env.sv

@@ -172,7 +172,7 @@ always_ff@(posedge clk or negedge rst_n) begin
     end
 end
 
-always_comb begin
+always_comb begin:RD_FSM
     rd_ns = rd_cs;
     case(rd_cs)
 
@@ -218,6 +218,10 @@ always_comb begin
             end else begin
                 rd_ns = ALLOCATE_LINE;
             end
+        end
+
+        ALLOCATE_LINE: begin
+            rd_ns = FETCH_REQ;
         end
 
         FETCH_REQ: begin
