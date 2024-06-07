@@ -153,7 +153,7 @@ always_ff@(posedge clk or negedge rst_n) begin
         return_tag_ff <= 0;
     end else if(rd_cs == WAIT_COMFLICT && rd_ns != WAIT_COMFLICT) begin
         return_tag_ff <= proc_tag_w;
-    end else if(cs_is_allocate_line || rd_hsked) begin
+    end else if(cs_is_allocate_line && !allocate_busy || rd_hsked) begin
         return_tag_ff <= return_tag;
     end
 end
@@ -161,7 +161,7 @@ end
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         return_index_ff <= 0;
-    end else if(cs_is_allocate_line) begin
+    end else if(cs_is_allocate_line && !allocate_busy) begin
         return_index_ff <= return_index;
     end
 end
@@ -289,7 +289,7 @@ always_comb begin
         acc_req = 1'b1;
         acc_cmd = 2'b00;
         acc_tag = 0;
-    end else if(cs_is_allocate_line) begin
+    end else if(cs_is_allocate_line && !allocate_busy) begin
         acc_req = 1'b1;
         acc_cmd = 2'b10;
         acc_tag = 0;
@@ -326,7 +326,7 @@ assign acc_rd_data_valid = mem_rdata_valid;
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         fetch_cmd <= 2'b0;
-    end else if(cs_is_allocate_line) begin
+    end else if(cs_is_allocate_line && !allocate_busy) begin
         fetch_cmd <= acc_status;
     end
 end

@@ -86,6 +86,7 @@ logic [$clog2(list_depth * list_width) - 1 : 0]         fetch_mem_waddr       ;
 logic                                                   fetch_mem_wen         ;
 logic                                                   fetch_mem_wready      ;
 logic [data_width - 1 : 0]                              fetch_mem_wdata       ;
+logic                                                   allocate_busy         ;
 
 list_ctrl #(
         .lists_depth     (lists_depth     ),
@@ -99,6 +100,7 @@ list_ctrl #(
         .acc_tag_0       (acc_tag_0       ) ,//input   [$clog2(lists_depth) - 1 : 0]
         .return_tag_0    (return_tag_0    ) ,//output  [$clog2(lists_depth) - 1 : 0]
         .return_index_0  (return_index_0  ) ,//output  [index_lenth         - 1 : 0]
+        .allocate_busy   (allocate_busy   ) ,//output   
         .acc_req_0       (acc_req_0       ) ,//input   
         .acc_index_1     (acc_index_1     ) ,//input   [index_lenth - 1 :0]
         .acc_status_1    (acc_status_1    ) ,//output  [2:0]
@@ -142,6 +144,7 @@ rd_ctrl #(
         .clk                (clk                ) ,//input   
         .rst_n              (rst_n              ) ,//input   
         .acc_rd_valid       (acc_rd_valid       ) ,//input   
+        .allocate_busy      (allocate_busy      ) ,//input   
         .acc_rd_ready       (acc_rd_ready       ) ,//output  
         .acc_rd_addr        (acc_rd_addr        ) ,//input   [addr_width - 1 : 0]
         .acc_rd_data        (acc_rd_data        ) ,//output  [data_width - 1 : 0]
@@ -183,6 +186,7 @@ wr_ctrl #(
         .acc_wr_valid    (acc_wr_valid      ) ,//input   
         .acc_wr_ready    (acc_wr_ready      ) ,//output  
         .acc_wr_addr     (acc_wr_addr       ) ,//input   [addr_width - 1 : 0]
+        .allocate_busy   (allocate_busy     ) ,//input   
         .acc_wr_data     (acc_wr_data       ) ,//input   [data_width - 1 : 0]
         .acc_index       (acc_index_0       ) ,//output  [addr_width - 1 :0]
         .acc_status      (acc_status_0      ) ,//input   [2:0]

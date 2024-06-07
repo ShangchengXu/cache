@@ -317,7 +317,7 @@ always_comb begin
         acc_req = 1'b1;
         acc_cmd = 2'b10;
         acc_tag = 0;
-    end else if(cs_is_acc_mem && mem_wready && fetch_proc) begin
+    end else if(cs_is_acc_mem && mem_wready) begin
         acc_req = 1'b1;
         acc_cmd = 2'b11;
         acc_tag = return_tag_ff;
