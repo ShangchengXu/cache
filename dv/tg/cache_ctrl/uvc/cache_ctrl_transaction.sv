@@ -6,7 +6,7 @@ class cache_ctrl_transaction extends uvm_sequence_item;
 
 
     constraint pload_cons{
-      addr < 4 * 32 *4;
+      addr < 10 * 32 *4;
       addr % 4 == 0;
  
    }

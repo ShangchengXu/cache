@@ -42,6 +42,7 @@ module wr_ctrl #(
 
                     output   logic  [$clog2(list_depth) + $clog2(list_width) - 1 : 0]  mem_waddr,
                     output   logic                                                     mem_wen,
+                    output   logic  [1:0]                                              mem_wpri,
                     input    logic                                                     mem_wready,
                     output   logic  [data_width - 1 : 0]                               mem_wdata
                 );
@@ -352,5 +353,18 @@ always_ff@(posedge clk or negedge rst_n) begin
         fetch_cmd <= acc_status;
     end
 end
+
+always_comb begin
+    if(wr_cs == NORM || wr_cs == IDLE) begin
+        mem_wpri = 2'b00;
+    end else if(wr_cs == WAIT_MEM || wr_cs == ACC_MEM) begin
+        mem_wpri = 2'b01;
+    end else begin
+        mem_wpri = 2'b00;
+    end
+
+end
+
+
 
 endmodule

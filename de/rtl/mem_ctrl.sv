@@ -10,6 +10,7 @@ module mem_ctrl #(
 
                     input    logic  [$clog2(mem_depth) - 1 : 0]                        mem_raddr,
                     input    logic                                                     mem_ren,
+                    input    logic  [1:0]                                              mem_rpri,
                     output   logic                                                     mem_rready,
                     output   logic  [data_width - 1 : 0]                               mem_rdata,
                     output   logic                                                     mem_rdata_valid,
@@ -17,6 +18,7 @@ module mem_ctrl #(
 
                     input    logic  [$clog2(mem_depth) - 1 : 0]                        mem_waddr,
                     input    logic                                                     mem_wen,
+                    input    logic  [1:0]                                              mem_wpri,
                     output   logic                                                     mem_wready,
                     input    logic  [data_width - 1 : 0]                               mem_wdata,
 
@@ -61,7 +63,7 @@ assign rhsked = mem_ren && mem_rready;
 assign local_mem_wen = whsked || fetch_whsked;
 assign local_mem_ren = rhsked || fetch_rhsked;
 
-assign wr_rd_conflict = (local_mem_wen && local_mem_ren) && (local_mem_raddr == local_mem_waddr);
+assign wr_rd_conflict = (whsked && rhsked) && (local_mem_raddr == local_mem_waddr);
 
 assign local_mem_waddr = fetch_mem_wen ? fetch_mem_waddr : mem_waddr;
 assign local_mem_raddr = fetch_mem_ren ? fetch_mem_raddr : mem_raddr;
@@ -91,8 +93,14 @@ end
 always_ff @(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         local_mem_rdata <= 0;
-    end else if(wr_rd_conflict)begin
+    end else if(wr_rd_conflict && (mem_rpri < mem_wpri)) begin
         local_mem_rdata <= local_mem_wdata;
+    end else if(wr_rd_conflict && (mem_rpri > mem_wpri)) begin
+        local_mem_rdata <= mem[local_mem_raddr];
+    end else if(wr_rd_conflict && (mem_rpri == mem_wpri)) begin
+        local_mem_rdata <= local_mem_wdata;
+    // end else if(wr_rd_conflict)begin
+    //     local_mem_rdata <= local_mem_wdata;
     end else if(local_mem_ren) begin
         local_mem_rdata <= mem[local_mem_raddr];
     end

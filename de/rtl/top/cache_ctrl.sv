@@ -87,6 +87,8 @@ logic                                                   fetch_mem_wen         ;
 logic                                                   fetch_mem_wready      ;
 logic [data_width - 1 : 0]                              fetch_mem_wdata       ;
 logic                                                   allocate_busy         ;
+logic  [1:0]                                            mem_rpri              ;
+logic  [1:0]                                            mem_wpri              ;
 
 list_ctrl #(
         .lists_depth     (lists_depth     ),
@@ -125,6 +127,8 @@ mem_ctrl #(
         .mem_wen                (mem_wen                ) ,//input   
         .mem_wready             (mem_wready             ) ,//output  
         .mem_wdata              (mem_wdata              ) ,//input   [data_width - 1 : 0]
+        .mem_rpri               (mem_rpri               ) ,
+        .mem_wpri               (mem_wpri               ) ,
         .fetch_mem_raddr        (fetch_mem_raddr        ) ,//input   [$clog2(mem_depth) - 1 : 0]
         .fetch_mem_ren          (fetch_mem_ren          ) ,//input   
         .fetch_mem_rready       (fetch_mem_rready       ) ,//output  
@@ -148,6 +152,7 @@ rd_ctrl #(
         .acc_rd_ready       (acc_rd_ready       ) ,//output  
         .acc_rd_addr        (acc_rd_addr        ) ,//input   [addr_width - 1 : 0]
         .acc_rd_data        (acc_rd_data        ) ,//output  [data_width - 1 : 0]
+        .mem_rpri           (mem_rpri           ) ,
         .acc_rd_data_valid  (acc_rd_data_valid  ) ,//output  
         .acc_index          (acc_index_1        ) ,//output  [addr_width - 1 :0]
         .acc_status         (acc_status_1       ) ,//input   [2:0]
@@ -190,6 +195,7 @@ wr_ctrl #(
         .acc_wr_data     (acc_wr_data       ) ,//input   [data_width - 1 : 0]
         .acc_index       (acc_index_0       ) ,//output  [addr_width - 1 :0]
         .acc_status      (acc_status_0      ) ,//input   [2:0]
+        .mem_wpri        (mem_wpri          ) ,
         .acc_cmd         (acc_cmd_0         ) ,//output  [1:0]
         .acc_tag         (acc_tag_0         ) ,//output  [$clog2(list_depth) - 1 : 0]
         .return_tag      (return_tag_0      ) ,//input   [$clog2(list_depth) - 1 : 0]

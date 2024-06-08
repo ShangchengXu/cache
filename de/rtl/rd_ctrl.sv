@@ -44,6 +44,7 @@ module rd_ctrl #(
 
                     output   logic  [$clog2(list_depth) + $clog2(list_width) - 1 : 0] mem_raddr,
                     output   logic                                                     mem_ren,
+                    output   logic  [1:0]                                              mem_rpri,
                     input    logic                                                     mem_rready,
                     input    logic  [data_width - 1 : 0]                               mem_rdata,
                     input    logic                                                     mem_rdata_valid
@@ -94,6 +95,8 @@ logic cs_is_wait_fetch_comp;
 
 logic cs_is_acc_mem;
 
+logic fetch_proc;
+
 assign cs_is_acc_mem = rd_cs == ACC_MEM;
 
 assign cs_is_allocate_line = rd_cs == ALLOCATE_LINE;
@@ -103,7 +106,6 @@ assign cs_is_check_comflict = rd_cs == CHECK_COMFLICT;
 assign cs_is_fetch_req = rd_cs == FETCH_REQ;
 
 assign cs_is_wait_fetch_comp = rd_cs == WAIT_FETCH_CMP;
-
 
 
 //proc status
@@ -124,6 +126,17 @@ assign acc_rd_ready = (rd_cs == IDLE) || (rd_cs == NORM);
 assign has_comflict = (proc_status_w == 3'b010 || proc_status_w == 3'b001) && (proc_addr_r == proc_addr_w);
 
 assign comflict_clear = proc_status_w == 3'b011;
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        fetch_proc <= 1'b0;
+    end else if(cs_is_fetch_req) begin
+        fetch_proc <= 1'b1;
+    end else if(cs_is_acc_mem && mem_rready && fetch_proc) begin
+        fetch_proc <= 1'b0;
+    end
+end
+
 
 always_comb begin
     if(cs_is_check_comflict) begin
@@ -293,7 +306,7 @@ always_comb begin
         acc_req = 1'b1;
         acc_cmd = 2'b10;
         acc_tag = 0;
-    end else if(cs_is_acc_mem && mem_rready) begin
+    end else if(cs_is_acc_mem && mem_rready && fetch_proc) begin
         acc_req = 1'b1;
         acc_cmd = 2'b11;
         acc_tag = return_tag_ff;
@@ -329,6 +342,18 @@ always_ff@(posedge clk or negedge rst_n) begin
     end else if(cs_is_allocate_line && !allocate_busy) begin
         fetch_cmd <= acc_status;
     end
+end
+
+
+always_comb begin
+    if(rd_cs == NORM || rd_cs == IDLE) begin
+        mem_rpri = 2'b00;
+    end else if(rd_cs == WAIT_MEM || rd_cs == ACC_MEM) begin
+        mem_rpri = 2'b01;
+    end else begin
+        mem_rpri = 2'b00;
+    end
+
 end
 
 endmodule
