@@ -56,6 +56,7 @@ typedef enum logic [3:0] {
         FETCH_REQ,
         WAIT_FETCH_CMP,
         ACC_MEM,
+        ACC_MEM_DONE,
         WAIT_COMFLICT
 } wr_state_t;
 
@@ -125,7 +126,7 @@ assign acc_wr_ready = (wr_cs == IDLE) || (wr_cs == NORM);
 
 assign has_comflict = (proc_status_r == 3'b010) && (proc_addr_r == proc_addr_w);
 
-assign comflict_clear = proc_status_r == 3'b011;
+assign comflict_clear = (proc_status_r != 3'b010) && (proc_addr_r != 3'b011);
 
 always_comb begin
     if(cs_is_check_comflict) begin
@@ -134,6 +135,8 @@ always_comb begin
         proc_status_w = 3'b010;
     end else if(cs_is_acc_mem && mem_whsked) begin
         proc_status_w = 3'b011;
+    end else if(wr_cs == WAIT_COMFLICT) begin
+        proc_status_w = 3'b100;
     end else if(cs_is_allocate_line || cs_is_fetch_req || cs_is_wait_fetch_comp || cs_is_acc_mem) begin
         proc_status_w = 3'b010;
     end else begin
@@ -211,8 +214,10 @@ always_comb begin:WR_FSM
 
         IDLE : begin
             if(wr_hsked) begin
-                if(acc_status == 3'b000 || acc_status == 3'b100) begin
+                if(acc_status == 3'b000) begin
                     wr_ns = CHECK_COMFLICT;
+                end else if(acc_status == 3'b100) begin
+                    wr_ns = WAIT_COMFLICT;
                 end else if(!mem_whsked) begin
                     wr_ns = WAIT_MEM;
                 end else begin
@@ -225,8 +230,10 @@ always_comb begin:WR_FSM
 
         NORM: begin
             if(wr_hsked) begin
-                if(acc_status == 3'b000 || acc_status == 3'b100) begin
+                if(acc_status == 3'b000) begin
                     wr_ns = CHECK_COMFLICT;
+                end else if(acc_status == 3'b100) begin
+                    wr_ns = WAIT_COMFLICT;
                 end else if(!mem_whsked) begin
                     wr_ns = WAIT_MEM;
                 end else begin
@@ -279,9 +286,17 @@ always_comb begin:WR_FSM
 
         ACC_MEM: begin
             if(mem_whsked) begin
-                wr_ns = NORM;
+                wr_ns = ACC_MEM_DONE;
             end else begin
                 wr_ns = ACC_MEM;
+            end
+        end
+
+        ACC_MEM_DONE: begin
+            if(proc_status_r == 3'b100) begin
+                wr_ns = ACC_MEM_DONE;
+            end else begin
+                wr_ns = NORM;
             end
         end
 
@@ -355,13 +370,13 @@ always_ff@(posedge clk or negedge rst_n) begin
 end
 
 always_comb begin
-    if(wr_cs == NORM || wr_cs == IDLE) begin
+    // if(wr_cs == NORM || wr_cs == IDLE) begin
+    //     mem_wpri = 2'b00;
+    // end else if(wr_cs == WAIT_MEM || wr_cs == ACC_MEM) begin
+    //     mem_wpri = 2'b01;
+    // end else begin
         mem_wpri = 2'b00;
-    end else if(wr_cs == WAIT_MEM || wr_cs == ACC_MEM) begin
-        mem_wpri = 2'b01;
-    end else begin
-        mem_wpri = 2'b00;
-    end
+    // end
 
 end
 

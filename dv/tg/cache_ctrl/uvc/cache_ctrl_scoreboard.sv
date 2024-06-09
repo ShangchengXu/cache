@@ -38,7 +38,7 @@ task cache_ctrl_scoreboard::main_phase(uvm_phase phase);
             tmp_tran = expect_queue.pop_front();
             result = actual_tr.compare(tmp_tran);
             if(result) begin 
-               `uvm_info("cache_ctrl_scoreboard", "Compare SUCCESSFULLY", UVM_LOW);
+               // `uvm_info("cache_ctrl_scoreboard", "Compare SUCCESSFULLY", UVM_LOW);
             end
             else begin
                `uvm_error("cache_ctrl_scoreboard", "Compare FAILED");
