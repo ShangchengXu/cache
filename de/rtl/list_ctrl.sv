@@ -15,6 +15,8 @@ module list_ctrl
                 output logic [index_lenth         - 1 : 0] return_index_0,
                 input  logic                               acc_req_0,
 
+                output logic                               allocate_busy,
+
 
                 // port1
                 input  logic [index_lenth - 1 :0]          acc_index_1,
@@ -67,6 +69,23 @@ tag_table_t tag_table[lists_depth];
 //when allocate
 // 3'b000 : allocate new line
 
+always_comb begin
+    if(!free_list.empty) begin
+        allocate_busy = 1'b0;
+    end else if(tag_table[lru_list.tail].status[2]) begin
+        allocate_busy = 1'b1;
+    end else if(acc_req_0 && acc_cmd_0 == 2'b00 && hit_tag_0 == lru_list.tail) begin
+        allocate_busy = 1'b1;
+    end else if(acc_req_0 && acc_cmd_0 == 2'b01 && hit_tag_0 == lru_list.tail) begin
+        allocate_busy = 1'b1;
+    end else if(acc_req_1 && acc_cmd_1 == 2'b00 && hit_tag_1 == lru_list.tail) begin
+        allocate_busy = 1'b1;
+    end else if(acc_req_1 && acc_cmd_1 == 2'b01 && hit_tag_1 == lru_list.tail) begin
+        allocate_busy = 1'b1;
+    end else begin
+        allocate_busy = 1'b0;
+    end
+end
 
 always_comb begin
     hit_tag_0 = 0;
@@ -110,8 +129,8 @@ assign tag0_is_tail = proc_tag_0 == lru_list.tail && !lru_list.empty;
 assign tag1_is_head = proc_tag_1 == lru_list.head && !lru_list.empty;
 assign tag1_is_tail = proc_tag_1 == lru_list.tail && !lru_list.empty;
 
-assign tag0_tag1 = tag_table[proc_tag_0].nxt_tag == proc_tag_1;
-assign tag1_tag0 = tag_table[proc_tag_1].nxt_tag == proc_tag_0;
+assign tag0_tag1 = (tag_table[proc_tag_0].nxt_tag == proc_tag_1) && (tag_table[proc_tag_1].pre_tag == proc_tag_0) && !tag1_is_head && !tag0_is_tail;
+assign tag1_tag0 = (tag_table[proc_tag_1].nxt_tag == proc_tag_0) && (tag_table[proc_tag_0].pre_tag == proc_tag_1) && !tag0_is_head && !tag1_is_tail;
 
 assign hit_comflict = hit_tag_0 == hit_tag_1;
 
@@ -122,6 +141,8 @@ always_comb begin
     end else if((acc_cmd_0 == 2'b10)&& acc_req_0 && free_list.empty) begin
         return_tag_0 = lru_list.tail;
     end else if(acc_req_0 && acc_cmd_0 == 2'b00 && acc_hit_0) begin
+        return_tag_0 = hit_tag_0;
+    end else if(acc_req_0 && acc_cmd_0 == 2'b01 && acc_hit_0) begin
         return_tag_0 = hit_tag_0;
     end
 end
@@ -142,7 +163,9 @@ always_comb begin
             return_tag_1 = lru_list.tail;
         end
     end else if(acc_req_1 && acc_cmd_1 == 2'b00 && acc_hit_1) begin
-        return_tag_0 = hit_tag_1;
+        return_tag_1 = hit_tag_1;
+    end else if(acc_req_1 && acc_cmd_1 == 2'b01 && acc_hit_1) begin
+        return_tag_1 = hit_tag_1;
     end
 end
 
@@ -154,7 +177,7 @@ always_ff@(posedge clk or negedge rst_n) begin
         lru_list.length <= 0;
         free_list.head <= 0;
         free_list.tail <= lists_depth - 1;
-        free_list.length <= 0;
+        free_list.length <= lists_depth;
     end else if(allocate_0 && allocate_1 && !lru_list.empty) begin
         lru_list.head <= return_tag_0;
         lru_list.length <= lru_list.length + 2;
@@ -256,6 +279,8 @@ always_ff@(posedge clk or negedge rst_n) begin
                 lru_list.head <= proc_tag_1;
         end
     end else if(allocate_0) begin
+        free_list.length <= free_list.length - 1;
+        free_list.tail <= tag_table[free_list.tail].pre_tag;
         if(!lru_list.empty) begin
             lru_list.head <= return_tag_0;
             lru_list.length <= lru_list.length + 1;
@@ -265,6 +290,8 @@ always_ff@(posedge clk or negedge rst_n) begin
             lru_list.length <= lru_list.length + 1;
         end
     end else if(allocate_1) begin
+        free_list.length <= free_list.length - 1;
+        free_list.tail <= tag_table[free_list.tail].pre_tag;
         if(!lru_list.empty) begin
             lru_list.head <= return_tag_1;
             lru_list.length <= lru_list.length + 1;
@@ -337,17 +364,19 @@ always_ff@(posedge clk or negedge rst_n) begin
         end
     end else if(proc_hit_0 && proc_hit_1 && !hit_comflict) begin
         if(tag0_tag1 && !tag0_is_head && !tag1_is_tail) begin
-            tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag;
-            tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag;
+            tag_table[tag_table[proc_tag_0].pre_tag].nxt_tag <= tag_table[proc_tag_1].nxt_tag;
+            tag_table[tag_table[proc_tag_1].nxt_tag].pre_tag <= tag_table[proc_tag_0].pre_tag;
             tag_table[proc_tag_1].nxt_tag <= lru_list.head;
+            tag_table[lru_list.head].pre_tag <= proc_tag_1;
         end else if(tag0_tag1 && !tag0_is_head && tag1_is_tail) begin
             tag_table[proc_tag_1].nxt_tag <= lru_list.head;
             tag_table[lru_list.head].pre_tag <= proc_tag_1;
             tag_table[proc_tag_1].nxt_tag <= lru_list.head;
         end else if (tag1_tag0 && !tag1_is_head && !tag0_is_tail) begin
-            tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag;
-            tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag;
+            tag_table[tag_table[proc_tag_1].pre_tag].nxt_tag <= tag_table[proc_tag_0].nxt_tag;
+            tag_table[tag_table[proc_tag_0].nxt_tag].pre_tag <= tag_table[proc_tag_1].pre_tag;
             tag_table[proc_tag_0].nxt_tag <= lru_list.head;
+            tag_table[lru_list.head].pre_tag <= proc_tag_0;
         end else if (tag1_tag0 && !tag1_is_head && tag0_is_tail) begin
             tag_table[proc_tag_0].nxt_tag <= lru_list.head;
             tag_table[lru_list.head].pre_tag <= proc_tag_0;
@@ -460,9 +489,9 @@ generate
                 tag_table[i].index <= acc_index_1;
             end else if(acc_req_0 && acc_tag_0 == i && acc_cmd_0 == 2'b11) begin
                 tag_table[i].status <= 3'b010;
-            end else if(acc_req_0 && return_tag_0 == i && acc_hit_0 && acc_cmd_0 == 2'b00) begin
+            end else if(acc_req_0 && return_tag_0 == i && acc_hit_0 && acc_cmd_0 == 2'b00 && tag_table[i].status!= 3'b100) begin
                 tag_table[i].status <= 3'b010;
-            end else if(acc_req_1 && return_tag_1 == i && acc_hit_1 && acc_cmd_1 == 2'b00) begin
+            end else if(acc_req_1 && return_tag_1 == i && acc_hit_1 && acc_cmd_1 == 2'b00 && tag_table[i].status!= 3'b100) begin
                 tag_table[i].status <= 3'b010;
             end else if(acc_req_1 && acc_tag_1 == i && acc_cmd_1 == 2'b11) begin
                 tag_table[i].status <= 3'b001;
@@ -495,6 +524,97 @@ always_comb begin
         return_index_1 = tag_table[return_tag_1].index;
     end
 end
+
+
+
+int lru_temp;
+logic lru_check;
+initial begin
+    forever begin
+        @(posedge clk);
+            lru_check = 0;
+            lru_temp = lru_list.head;
+            lru_check = 1;
+        for(int i = 0; i < lists_depth; i++) begin
+            lru_temp = tag_table[lru_temp].nxt_tag;
+            if(lru_temp == lru_list.tail && (i == lru_list.length - 2)) begin
+                lru_check = 0;
+                break;
+            end
+        end
+        if(lru_list.length < 2) begin
+            lru_check = 0;
+        end
+    end
+end
+
+
+int lru_temp_rev;
+logic lru_check_rev;
+initial begin
+    forever begin
+        @(posedge clk);
+            lru_check_rev = 0;
+            lru_temp_rev = lru_list.tail;
+            lru_check_rev = 1;
+        for(int i = 0; i < lists_depth; i++) begin
+            lru_temp_rev = tag_table[lru_temp_rev].pre_tag;
+            if(lru_temp_rev == lru_list.head && (i == lru_list.length - 2)) begin
+                lru_check_rev = 0;
+                break;
+            end
+        end
+        if(lru_list.length < 2) begin
+            lru_check_rev = 0;
+        end
+    end
+end
+
+
+
+int free_temp;
+logic free_check;
+initial begin
+    forever begin
+        @(posedge clk);
+            free_check = 0;
+            free_temp = free_list.head;
+            free_check = 1;
+        for(int i = 0; i < lists_depth; i++) begin
+            free_temp = tag_table[free_temp].nxt_tag;
+            if(free_temp == free_list.tail && (i == free_list.length - 2)) begin
+                free_check = 0;
+                break;
+            end
+        end
+        if(free_list.length < 2) begin
+            free_check = 0;
+        end
+    end
+end
+
+
+int free_temp_rev;
+logic free_check_rev;
+initial begin
+    forever begin
+        @(posedge clk);
+            free_check_rev = 0;
+            free_temp_rev = free_list.tail;
+            free_check_rev = 1;
+        for(int i = 0; i < lists_depth; i++) begin
+            free_temp_rev = tag_table[free_temp_rev].pre_tag;
+            if(free_temp_rev == free_list.head && (i == free_list.length - 2)) begin
+                free_check_rev = 0;
+                break;
+            end
+        end
+        if(free_list.length < 2) begin
+            free_check_rev = 0;
+        end
+    end
+end
+
 
 
 
