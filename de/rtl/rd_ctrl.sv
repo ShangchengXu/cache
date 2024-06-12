@@ -422,6 +422,10 @@ always_ff@(posedge clk or negedge rst_n) begin
         fetch_cmd <= 2'b0;
     end else if(cs_is_allocate_line && req_hsked && acc_status == 3'b010) begin
         fetch_cmd <= 2'b00;
+    end else if(cs_is_allocate_line && req_hsked && acc_status == 3'b001) begin
+        fetch_cmd <= 2'b01;
+    end else if(cs_is_allocate_line && req_hsked && acc_status == 3'b000) begin
+        fetch_cmd <= 2'b01;
     end else if(rd_cs == UPDATE_LIST && rd_req_pending && req_hsked) begin
         fetch_cmd <= 2'b01;
     end

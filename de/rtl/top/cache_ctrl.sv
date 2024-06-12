@@ -41,6 +41,8 @@ logic [$clog2(list_depth) - 1 : 0]                      acc_tag_1             ;
 logic [$clog2(list_depth) - 1 : 0]                      return_tag_1          ;
 logic [addr_width - 1 :0]                               return_index_1        ;
 logic                                                   acc_req_1             ;
+logic                                                   acc_gnt_1             ;
+logic                                                   acc_gnt_0             ;
 logic [$clog2(list_depth) + $clog2(list_width) - 1 : 0] mem_raddr             ;
 logic                                                   mem_ren               ;
 logic                                                   mem_rready            ;
@@ -84,7 +86,6 @@ logic [$clog2(list_depth * list_width) - 1 : 0]         fetch_mem_waddr       ;
 logic                                                   fetch_mem_wen         ;
 logic                                                   fetch_mem_wready      ;
 logic [data_width - 1 : 0]                              fetch_mem_wdata       ;
-logic                                                   allocate_busy         ;
 logic  [1:0]                                            mem_rpri              ;
 logic  [1:0]                                            mem_wpri              ;
 
@@ -100,14 +101,15 @@ list_ctrl #(
         .acc_tag_0       (acc_tag_0       ) ,//input   [$clog2(lists_depth) - 1 : 0]
         .return_tag_0    (return_tag_0    ) ,//output  [$clog2(lists_depth) - 1 : 0]
         .return_index_0  (return_index_0  ) ,//output  [index_lenth         - 1 : 0]
-        .allocate_busy   (allocate_busy   ) ,//output   
         .acc_req_0       (acc_req_0       ) ,//input   
+        .acc_gnt_0       (acc_gnt_0       ) ,//output
         .acc_index_1     (acc_index_1     ) ,//input   [index_lenth - 1 :0]
         .acc_status_1    (acc_status_1    ) ,//output  [2:0]
         .acc_cmd_1       (acc_cmd_1       ) ,//input   [1:0]
         .acc_tag_1       (acc_tag_1       ) ,//input   [$clog2(lists_depth) - 1 : 0]
         .return_tag_1    (return_tag_1    ) ,//output  [$clog2(lists_depth) - 1 : 0]
         .return_index_1  (return_index_1  ) ,//output  [index_lenth         - 1 : 0]
+        .acc_gnt_1       (acc_gnt_1       ) ,//output
         .acc_req_1       (acc_req_1       ));//input   
 
 mem_ctrl #(
@@ -146,7 +148,6 @@ rd_ctrl #(
         .clk                (clk                ) ,//input   
         .rst_n              (rst_n              ) ,//input   
         .acc_rd_valid       (acc_rd_valid       ) ,//input   
-        .allocate_busy      (allocate_busy      ) ,//input   
         .acc_rd_ready       (acc_rd_ready       ) ,//output  
         .acc_rd_addr        (acc_rd_addr        ) ,//input   [addr_width - 1 : 0]
         .acc_rd_data        (acc_rd_data        ) ,//output  [data_width - 1 : 0]
@@ -159,6 +160,7 @@ rd_ctrl #(
         .return_tag         (return_tag_1       ) ,//input   [$clog2(list_depth) - 1 : 0]
         .return_index       (return_index_1     ) ,//input   [addr_width - 1 :0]
         .acc_req            (acc_req_1          ) ,//output  
+        .acc_gnt            (acc_gnt_1          ) ,//input
         .proc_status_r      (proc_status_r      ) ,//output  [2:0]
         .proc_addr_r        (proc_addr_r        ) ,//output  [addr_width - 1 : 0]
         .proc_tag_r         (proc_tag_r         ) ,//output  [$ - 1 : 0]
@@ -188,7 +190,6 @@ wr_ctrl #(
         .acc_wr_valid    (acc_wr_valid      ) ,//input   
         .acc_wr_ready    (acc_wr_ready      ) ,//output  
         .acc_wr_addr     (acc_wr_addr       ) ,//input   [addr_width - 1 : 0]
-        .allocate_busy   (allocate_busy     ) ,//input   
         .acc_wr_data     (acc_wr_data       ) ,//input   [data_width - 1 : 0]
         .acc_index       (acc_index_0       ) ,//output  [addr_width - 1 :0]
         .acc_status      (acc_status_0      ) ,//input   [2:0]
@@ -198,6 +199,7 @@ wr_ctrl #(
         .return_tag      (return_tag_0      ) ,//input   [$clog2(list_depth) - 1 : 0]
         .return_index    (return_index_0    ) ,//input   [addr_width - 1 :0]
         .acc_req         (acc_req_0         ) ,//output  
+        .acc_gnt         (acc_gnt_0         ) ,//input
         .proc_status_w   (proc_status_w     ) ,//output  [2:0]
         .proc_addr_w     (proc_addr_w       ) ,//output  [addr_width - 1 : 0]
         .proc_status_r   (proc_status_r     ) ,//input   [2:0]

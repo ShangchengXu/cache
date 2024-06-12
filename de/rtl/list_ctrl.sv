@@ -25,7 +25,7 @@ module list_ctrl
                 output logic [$clog2(lists_depth) - 1 : 0] return_tag_1,
                 output logic [index_lenth         - 1 : 0] return_index_1,
                 input  logic                               acc_req_1,
-                output logic                               acc_gnt_1,
+                output logic                               acc_gnt_1
             );
 
 //variables
@@ -45,6 +45,7 @@ logic tag1_tag0;
 logic hit_comflict;
 logic acc_hsked_0;
 logic acc_hsked_1;
+logic allocate_busy;
 typedef struct {
     logic [$clog2(lists_depth) - 1 : 0] head;
     logic [$clog2(lists_depth) - 1 : 0] tail;
@@ -81,13 +82,13 @@ always_comb begin
         allocate_busy = 1'b0;
     end else if(tag_table[lru_list.tail].status[2]) begin
         allocate_busy = 1'b1;
-    end else if(acc_hsked_0 && acc_cmd_0 == 2'b00 && hit_tag_0 == lru_list.tail) begin
+    end else if(acc_req_0 && acc_cmd_0 == 2'b00 && hit_tag_0 == lru_list.tail) begin
         allocate_busy = 1'b1;
-    end else if(acc_hsked_0 && acc_cmd_0 == 2'b01 && hit_tag_0 == lru_list.tail) begin
+    end else if(acc_req_0 && acc_cmd_0 == 2'b01 && hit_tag_0 == lru_list.tail) begin
         allocate_busy = 1'b1;
-    end else if(acc_hsked_1 && acc_cmd_1 == 2'b00 && hit_tag_1 == lru_list.tail) begin
+    end else if(acc_req_1 && acc_cmd_1 == 2'b00 && hit_tag_1 == lru_list.tail) begin
         allocate_busy = 1'b1;
-    end else if(acc_hsked_1 && acc_cmd_1 == 2'b01 && hit_tag_1 == lru_list.tail) begin
+    end else if(acc_req_1 && acc_cmd_1 == 2'b01 && hit_tag_1 == lru_list.tail) begin
         allocate_busy = 1'b1;
     end else begin
         allocate_busy = 1'b0;
@@ -109,7 +110,7 @@ always_comb begin
     if(acc_cmd_1 == 2'b10 && allocate_busy) begin
         acc_gnt_1 = 1'b0;
     end else if(acc_cmd_1 == 3'b00 && tag_table[hit_tag_1].status == 3'b110) begin
-        acc_gnt_0 = 1'b0;
+        acc_gnt_1 = 1'b0;
     end
 end
 
@@ -502,7 +503,7 @@ generate
                 tag_table[i].status <= 3'b000;
                 tag_table[i].index <= 0;
             end else  begin
-                tag_table[i].status <= tag_tag[i].nxt_status;
+                tag_table[i].status <= tag_table[i].nxt_status;
                 tag_table[i].index <= tag_table[i].nxt_index;
             end
         end
@@ -625,6 +626,7 @@ always_comb begin
 end
 
 
+`ifdef DEBUG
 
 int lru_temp;
 logic lru_check;
@@ -668,7 +670,6 @@ initial begin
         end
     end
 end
-
 
 
 int free_temp;
@@ -715,6 +716,7 @@ initial begin
 end
 
 
+`endif
 
 
 endmodule

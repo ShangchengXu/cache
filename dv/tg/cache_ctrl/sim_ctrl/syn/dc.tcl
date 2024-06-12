@@ -36,7 +36,7 @@ set current_design $top_design
 
 set clk_src(clk) [get_ports clk]
 
-set Period(300M) [expr 1000/600]
+set Period(300M) [expr 1000/300]
 
 create_clock  -name clk -period $Period(300M)  $clk_src(clk)
 
@@ -44,12 +44,11 @@ set input_ports_grp(clk) [all_inputs]
 
 set output_ports_grp(clk) [all_outputs]
 
-set_input_delay -max [$Period(clk) * 0.6] -clock $clk_src(clk) [remove_from_collection [all_inputs] [get_ports clk]]
-set_input_delay -min [$Period(clk) * 0.0] -clock $clk_src(clk) [remove_from_collection [all_inputs] [get_ports clk]]
+set_input_delay -max [expr $Period(300M) * 0.4] -clock clk [remove_from_collection [all_inputs] [get_ports clk]]
+set_input_delay -min [expr $Period(300M) * 0.0] -clock clk [remove_from_collection [all_inputs] [get_ports clk]]
 
-set_output_delay -max [$Period(clk) * 0.6] -clock $clk_src(clk) [all_outputs]
-set_output_delay -min [$Period(clk) * 0.0] -clock $clk_src(clk) [all_outputs]
-
+set_output_delay -max [expr $Period(300M) * 0.4] -clock clk [all_outputs]
+set_output_delay -min [expr $Period(300M) * 0.0] -clock clk [all_outputs]
 
 set_operating_conditions ss_cworst_max_0p81v_125c
 
