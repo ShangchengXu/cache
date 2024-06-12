@@ -67,14 +67,12 @@ logic [1:0]                                             fetch_cmd_w           ;
 logic                                                   fetch_req_w           ;
 logic [$clog2(list_depth) - 1 : 0]                      fetch_tag_w           ;
 logic [addr_width - 1 : 0]                              fetch_addr_w          ;
-logic [addr_width - 1 : 0]                              fetch_addr_pre_w      ;
 logic                                                   fetch_gnt_w           ;
 logic                                                   fetch_done_w          ;
 logic [1:0]                                             fetch_cmd_r           ;
 logic                                                   fetch_req_r           ;
 logic [$clog2(list_depth) - 1 : 0]                      fetch_tag_r           ;
 logic [addr_width - 1 : 0]                              fetch_addr_r          ;
-logic [addr_width - 1 : 0]                              fetch_addr_pre_r      ;
 logic                                                   fetch_gnt_r           ;
 logic                                                   fetch_done_r          ;
 logic [$clog2(list_depth * list_width) - 1 : 0]         fetch_mem_raddr       ;
@@ -171,7 +169,6 @@ rd_ctrl #(
         .fetch_req          (fetch_req_r        ) ,//output  
         .fetch_tag          (fetch_tag_r        ) ,//output  [$clog2(list_depth) - 1 : 0]
         .fetch_addr         (fetch_addr_r       ) ,//output  [addr_width - 1 : 0]
-        .fetch_addr_pre     (fetch_addr_pre_r   ) ,//output  [addr_width - 1 : 0]
         .fetch_gnt          (fetch_gnt_r        ) ,//input   
         .fetch_done         (fetch_done_r       ) ,//input   
         .mem_raddr          (mem_raddr          ) ,//output  [$clog2(list_depth) + $clog2(list_width) - 1 : 0]
@@ -211,7 +208,6 @@ wr_ctrl #(
         .fetch_req       (fetch_req_w       ) ,//output  
         .fetch_tag       (fetch_tag_w       ) ,//output  [$clog2(list_depth) - 1 : 0]
         .fetch_addr      (fetch_addr_w      ) ,//output  [addr_width - 1 : 0]
-        .fetch_addr_pre  (fetch_addr_pre_w  ) ,//output  [addr_width - 1 : 0]
         .fetch_gnt       (fetch_gnt_w       ) ,//input   
         .fetch_done      (fetch_done_w      ) ,//input   
         .mem_waddr       (mem_waddr         ) ,//output  [$clog2(list_depth) + $clog2(list_width) - 1 : 0]
@@ -226,20 +222,18 @@ fetch_ctrl #(
            fetch_ctrl_inst (
         .clk                    (clk                    ) ,//input   
         .rst_n                  (rst_n                  ) ,//input   
-        .fetch_cmd_w            (fetch_cmd_w            ) ,//input   [1:0]
-        .fetch_req_w            (fetch_req_w            ) ,//input   
-        .fetch_tag_w            (fetch_tag_w            ) ,//input   [$clog2(list_depth) - 1 : 0]
-        .fetch_addr_w           (fetch_addr_w           ) ,//input   [addr_width - 1 : 0]
-        .fetch_addr_pre_w       (fetch_addr_pre_w       ) ,//input   [addr_width - 1 : 0]
-        .fetch_gnt_w            (fetch_gnt_w            ) ,//output  
-        .fetch_done_w           (fetch_done_w           ) ,//output  
-        .fetch_cmd_r            (fetch_cmd_r            ) ,//input   [1:0]
-        .fetch_req_r            (fetch_req_r            ) ,//input   
-        .fetch_tag_r            (fetch_tag_r            ) ,//input   [$clog2(list_depth) - 1 : 0]
-        .fetch_addr_r           (fetch_addr_r           ) ,//input   [addr_width - 1 : 0]
-        .fetch_addr_pre_r       (fetch_addr_pre_r       ) ,//input   [addr_width - 1 : 0]
-        .fetch_gnt_r            (fetch_gnt_r            ) ,//output  
-        .fetch_done_r           (fetch_done_r           ) ,//output  
+        .fetch_cmd_0            (fetch_cmd_w            ) ,//input   [1:0]
+        .fetch_req_0            (fetch_req_w            ) ,//input   
+        .fetch_tag_0            (fetch_tag_w            ) ,//input   [$clog2(list_depth) - 1 : 0]
+        .fetch_addr_0           (fetch_addr_w           ) ,//input   [addr_width - 1 : 0]
+        .fetch_gnt_0            (fetch_gnt_w            ) ,//output  
+        .fetch_done_0           (fetch_done_w           ) ,//output  
+        .fetch_cmd_1            (fetch_cmd_r            ) ,//input   [1:0]
+        .fetch_req_1            (fetch_req_r            ) ,//input   
+        .fetch_tag_1            (fetch_tag_r            ) ,//input   [$clog2(list_depth) - 1 : 0]
+        .fetch_addr_1           (fetch_addr_r           ) ,//input   [addr_width - 1 : 0]
+        .fetch_gnt_1            (fetch_gnt_r            ) ,//output  
+        .fetch_done_1           (fetch_done_r           ) ,//output  
         .fetch_mem_raddr        (fetch_mem_raddr        ) ,//output  [$clog2(mem_depth) - 1 : 0]
         .fetch_mem_ren          (fetch_mem_ren          ) ,//output  
         .fetch_mem_rready       (fetch_mem_rready       ) ,//input   

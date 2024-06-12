@@ -9,22 +9,20 @@ module fetch_ctrl
                     input    logic                                              clk,
                     input    logic                                              rst_n,
 
-                    input    logic [1:0]                                        fetch_cmd_w,
-                    input    logic                                              fetch_req_w,
-                    input    logic [$clog2(list_depth) - 1 : 0]                 fetch_tag_w,
-                    input    logic [addr_width - 1 : 0]                         fetch_addr_w,
-                    input    logic [addr_width - 1 : 0]                         fetch_addr_pre_w,
-                    output   logic                                              fetch_gnt_w,
-                    output   logic                                              fetch_done_w,
+                    input    logic [1:0]                                        fetch_cmd_0,
+                    input    logic                                              fetch_req_0,
+                    input    logic [$clog2(list_depth) - 1 : 0]                 fetch_tag_0,
+                    input    logic [addr_0idth - 1 : 0]                         fetch_addr_0,
+                    output   logic                                              fetch_gnt_0,
+                    output   logic                                              fetch_done_0,
 
 
-                    input     logic [1:0]                                        fetch_cmd_r,
-                    input     logic                                              fetch_req_r,
-                    input     logic [$clog2(list_depth) - 1 : 0]                 fetch_tag_r,
-                    input     logic [addr_width - 1 : 0]                         fetch_addr_r,
-                    input     logic [addr_width - 1 : 0]                         fetch_addr_pre_r,
-                    output    logic                                              fetch_gnt_r,
-                    output    logic                                              fetch_done_r,
+                    input     logic [1:0]                                        fetch_cmd_1,
+                    input     logic                                              fetch_req_1,
+                    input     logic [$clog2(list_depth) - 1 : 0]                 fetch_tag_1,
+                    input     logic [addr_width - 1 : 0]                         fetch_addr_1,
+                    output    logic                                              fetch_gnt_1,
+                    output    logic                                              fetch_done_1,
 
                     output   logic  [$clog2(list_depth * list_width) - 1 : 0]   fetch_mem_raddr,
                     output   logic                                              fetch_mem_ren,
@@ -58,11 +56,19 @@ module fetch_ctrl
                     input    logic                                              rd_valid,
                     output   logic                                              rd_ready
                 );
-logic [$clog2(list_depth)  - 1 : 0] local_tag;
-logic [1:0] local_owner;
-logic [addr_width - 1 :0 ] local_addr;
-logic [addr_width - 1 :0 ] local_addr_pre;
-logic [1:0] local_cmd;
+logic [$clog2(list_depth)  - 1 : 0] local_tag_w;
+logic [1:0] local_owner_w;
+logic [addr_width - 1 :0 ] local_addr_w;
+logic [addr_width - 1 :0 ] local_addr_pre_w;
+logic [1:0] local_cmd_w;
+
+
+logic [$clog2(list_depth)  - 1 : 0] local_tag_r;
+logic [1:0] local_owner_r;
+logic [addr_width - 1 :0 ] local_addr_r;
+logic [addr_width - 1 :0 ] local_addr_pre_r;
+logic [1:0] local_cmd_r;
+
 logic fetch_hsked_w, fetch_hsked_r;
 logic local_done;
 logic wr_state_done;
@@ -72,16 +78,6 @@ logic wr_data_hsked;
 logic rd_data_hsked;
 logic mem_whsked;
 logic mem_rhsked;
-
-typedef enum logic [3:0] { 
-        IDLE,
-        REQ,
-        WAIT_RD_DONE,
-        WAIT_WR_RD_DONE,
-        WAIT_WR_DONE,
-        DONE
-} main_state_t;
-main_state_t main_cs,main_ns;
 
 typedef enum logic [3:0] { 
         WR_IDLE,
@@ -109,7 +105,7 @@ assign wr_data_hsked = wr_valid && wr_ready;
 assign rd_data_hsked = rd_valid && rd_ready;
 assign mem_rhsked = fetch_mem_ren && fetch_mem_rready;
 assign mem_whsked = fetch_mem_wen && fetch_mem_wready;
-assign local_done = main_cs == DONE;
+
 assign rd_state_done = rd_cs == RD_DONE;
 assign wr_state_done = wr_cs == WR_DONE;
 logic [$clog2(list_width) - 1 : 0] wr_cnt;
@@ -117,34 +113,37 @@ logic [$clog2(list_width) - 1 : 0] rd_cnt;
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
-        local_addr <= 0;
-        local_addr_pre <= 0;
-        local_owner <= 0;
-        local_cmd <= 0;
-        local_tag <= 0;
-    end else if(fetch_hsked_w)begin
-        local_addr <= fetch_addr_w;
-        local_addr_pre <= fetch_addr_pre_w;
-        local_owner <= 2'b00;
-        local_cmd <= fetch_cmd_w;
-        local_tag <= fetch_tag_w;
-    end else if(fetch_hsked_r)begin
-        local_addr <= fetch_addr_r;
-        local_addr_pre <= fetch_addr_pre_r;
-        local_owner <= 2'b01;
-        local_cmd <= fetch_cmd_r;
-        local_tag <= fetch_tag_r;
+        local_addr_w <= 0;
+        local_owner_w <= 0;
+        local_tag_w <= 0;
+    end else if(fetch_hsked_0 && fetch_cmd_0 == 2'b00)begin
+        local_addr_w <= fetch_addr_0;
+        local_owner_w <= 2'b00;
+        local_tag_w <= fetch_tag_0;
+    end else if(fetch_hsked_1 && fetch_cmd_1 == 2'b00)begin
+        local_addr_w <= fetch_addr_1;
+        local_owner_w <= 2'b01;
+        local_tag_w <= fetch_tag_1;
     end
 end
 
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
-        main_cs <= IDLE;
-    end else if(main_cs != main_ns) begin
-        main_cs <= main_ns;
+        local_addr_r <= 0;
+        local_owner_r <= 0;
+        local_tag_r <= 0;
+    end else if(fetch_hsked_0 && fetch_cmd_0 == 2'b01)begin
+        local_addr_r <= fetch_addr_0;
+        local_owner_r <= 2'b00;
+        local_tag_r <= fetch_tag_0;
+    end else if(fetch_hsked_1 && fetch_cmd_1 == 2'b01)begin
+        local_addr_r <= fetch_addr_1;
+        local_owner_r <= 2'b01;
+        local_tag_r <= fetch_tag_1;
     end
 end
+
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
@@ -162,63 +161,6 @@ always_ff@(posedge clk or negedge rst_n) begin
     end
 end
 
-always_comb begin:MAIN_FSM
-    main_ns = main_cs;
-    case(main_cs) 
-
-    IDLE: begin
-        if(fetch_hsked_w || fetch_hsked_r) begin
-            main_ns = REQ;
-        end else begin
-            main_ns = IDLE;
-        end
-    end
-
-    REQ: begin
-        if(local_cmd == 2'b01 || local_cmd == 2'b00) begin
-            main_ns = WAIT_RD_DONE;
-        end else if(local_cmd == 2'b10) begin
-            main_ns = WAIT_WR_RD_DONE;
-        end else begin
-            main_ns = IDLE;
-        end
-    end
-
-    WAIT_RD_DONE: begin
-        if(rd_state_done) begin
-            main_ns = DONE;
-        end else begin
-            main_ns = WAIT_RD_DONE;
-        end
-    end
-
-    WAIT_WR_RD_DONE: begin
-        if(wr_state_done && rd_state_done) begin
-            main_ns = DONE;
-        end else if(wr_state_done) begin
-            main_ns = WAIT_RD_DONE;
-        end else if(rd_state_done) begin
-            main_ns = WAIT_WR_DONE;
-        end
-    end
-
-    WAIT_WR_DONE: begin
-        if(wr_state_done) begin
-            main_ns = DONE;
-        end else begin
-            main_ns = WAIT_WR_DONE;
-        end
-    end
-
-    DONE: begin
-        main_ns = IDLE;
-    end
-
-    default: main_ns = IDLE;
-
-    endcase
-end
-
 always_comb begin:RD_FSM
 
     rd_ns = rd_cs;
@@ -226,20 +168,11 @@ always_comb begin:RD_FSM
     case(rd_cs) 
 
     RD_IDLE:begin
-        if(main_cs == REQ && main_ns == WAIT_RD_DONE) begin
+        if(fetch_hsked_0 && fetch_cmd_0 == 2'b01 ||
+            fetch_hsked_1 && fetch_cmd_1 == 2'b01) begin
             rd_ns = RD_REQ;
-        end else if(main_cs == REQ && main_ns == WAIT_WR_RD_DONE) begin
-            rd_ns = RD_WAIT_WR;
         end else begin
             rd_ns = RD_IDLE;
-        end
-    end
-
-    RD_WAIT_WR: begin
-        if(wr_last && wr_data_hsked) begin
-            rd_ns = RD_REQ;
-        end else begin
-            rd_ns = RD_WAIT_WR;
         end
     end
 
@@ -274,7 +207,8 @@ always_comb begin:WR_FSM
     case(wr_cs)
 
         WR_IDLE: begin
-            if(main_cs == REQ && main_ns == WAIT_WR_RD_DONE) begin
+            if(fetch_hsked_0 && fetch_cmd_0 == 2'b00 ||
+                fetch_hsked_1 && fetch_cmd_1 == 2'b00) begin
                 wr_ns = WR_REQ;
             end else begin
                 wr_ns = WR_IDLE;
@@ -318,7 +252,7 @@ end
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         rd_cnt <= 0;
-    end else if(main_cs == REQ) begin
+    end else if(rd_cs == RD_REQ) begin
         rd_cnt <= 0;
     end else if(rd_data_hsked) begin
         rd_cnt <= rd_cnt + 1;
@@ -328,16 +262,16 @@ end
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         wr_cnt <= 0;
-    end else if(main_cs == REQ) begin
+    end else if(wr_cs == WR_REQ) begin
         wr_cnt <= 0;
     end else if(mem_rhsked) begin
         wr_cnt <= wr_cnt + 1;
     end
 end
 
-assign fetch_mem_waddr = {local_tag,rd_cnt};
+assign fetch_mem_waddr = {local_tag_r,rd_cnt};
 
-assign fetch_mem_raddr = {local_tag,wr_cnt};
+assign fetch_mem_raddr = {local_tag_w,wr_cnt};
 
 assign fetch_mem_wen = rd_valid;
 
@@ -374,20 +308,28 @@ assign rd_len = list_width * data_width / 8;
 assign rd_addr = {local_addr[addr_width - 1 : $clog2(list_width)],{$clog2(list_width){1'b0}}};
 
 always_comb  begin
-    if(fetch_req_w) begin
-        fetch_gnt_w = main_cs == IDLE;
-        fetch_gnt_r = 1'b0;
-    end else if(fetch_req_r) begin
-        fetch_gnt_r = main_cs == IDLE;
-        fetch_gnt_w = 1'b0;
+    if(fetch_req_0 && fetch_cmd_0 == 2'b00) begin
+        fetch_gnt_0 = wr_cs == IDLE;
+    end else if(fetch_req_0 && fetch_cmd_1 == 2'b01) begin
+        fetch_gnt_0 = rd_cs == IDLE;
     end else begin
-        fetch_gnt_w = 1'b0;
-        fetch_gnt_r = 1'b0;
+        fetch_gnt_0 = 1'b0;
     end
 end
 
-assign fetch_done_w = local_done && local_owner == 2'b00;
-assign fetch_done_r = local_done && local_owner == 2'b01;
+
+always_comb  begin
+    if(fetch_req_1 && fetch_cmd_1 == 2'b00) begin
+        fetch_gnt_0 = wr_cs == IDLE && !(fetch_req_0 && fetch_cmd_0 == 2'b00);
+    end else if(fetch_req_0 && fetch_cmd_1 == 2'b01) begin
+        fetch_gnt_0 = rd_cs == IDLE && !(fetch_req_0 && fetch_cmd_0 == 2'b01);
+    end else begin
+        fetch_gnt_0 = 1'b0;
+    end
+end
+
+assign fetch_done_0 = rd_state_done && local_owner_r == 2'b00 || wr_state_done && local_owner_w == 2'b00;
+assign fetch_done_1 = rd_state_done && local_owner_r == 2'b01 || wr_state_done && local_owner_w == 2'b01;
 
 
 endmodule
