@@ -15,7 +15,7 @@ module wr_ctrl #(
 
                     output   logic [addr_width - 1 :0]           acc_index,
                     input    logic [2:0]                         acc_status,
-                    output   logic [1:0]                         acc_cmd,
+                    output   logic [2:0]                         acc_cmd,
                     output   logic [$clog2(list_depth) - 1 : 0]  acc_tag,
                     input    logic [$clog2(list_depth) - 1 : 0]  return_tag,
                     input    logic [addr_width - 1 :0]           return_index,
@@ -29,6 +29,13 @@ module wr_ctrl #(
                     input    logic [2:0]                         proc_status_r,
                     input    logic [addr_width - 1 : 0]          proc_addr_r,
                     input    logic [$clog2(list_depth) - 1 : 0]  proc_tag_r,
+
+
+                    output   logic                               msg_req,
+                    output   logic [3:0]                         msg,
+                    input    logic [3:0]                         msg_rsp,
+                    input    logic                               msg_valid,
+                    input    logic                               msg_gnt,
 
 
                     output   logic [1:0]                         fetch_cmd,
@@ -53,6 +60,8 @@ typedef enum logic [3:0] {
         CHECK_COMFLICT,
         ALLOCATE_LINE,
         WR_REQ,
+        MSG_REQ,
+        WAIT_MSG_RSP,
         WAIT_WR_DONE,
         RD_REQ,
         WAIT_RD_DONE,
@@ -88,6 +97,8 @@ logic mem_whsked;
 
 logic rd_req_pending;
 
+logic wr_req_pending;
+
 logic has_comflict;
 
 logic comflict_clear;
@@ -106,6 +117,8 @@ logic cs_is_update_list;
 
 logic fetch_proc;
 
+logic msg_hsked;
+
 assign cs_is_acc_mem = wr_cs == ACC_MEM;
 
 assign cs_is_allocate_line = wr_cs == ALLOCATE_LINE;
@@ -119,6 +132,8 @@ assign cs_is_wait_fetch_comp = wr_cs == WAIT_WR_DONE || wr_cs == WAIT_RD_DONE;
 assign  cs_is_update_list = wr_cs == UPDATE_LIST;
 
 assign req_hsked = acc_req && acc_gnt;
+
+assign msg_hsked = msg_req && msg_gnt;
 
 //proc status
 //3'b000 no need
@@ -136,19 +151,16 @@ assign acc_wr_ready = (wr_cs == IDLE) || (wr_cs == NORM);
 
 assign has_comflict = (proc_status_r == 3'b010) && (proc_addr_r == proc_addr_w);
 
-assign comflict_clear = (proc_status_r != 3'b010) && (proc_addr_r != 3'b011);
+assign comflict_clear = (proc_status_r != 3'b010);
 
 always_comb begin
     if(cs_is_check_comflict) begin
         proc_status_w = 3'b001;
-    end else if(cs_is_allocate_line || cs_is_fetch_req || cs_is_wait_fetch_comp) begin
-        proc_status_w = 3'b010;
-    end else if(cs_is_acc_mem && mem_whsked) begin
-        proc_status_w = 3'b011;
     end else if(wr_cs == WAIT_COMFLICT) begin
         proc_status_w = 3'b100;
     end else if(cs_is_allocate_line || cs_is_fetch_req || 
-                cs_is_wait_fetch_comp || cs_is_acc_mem || cs_is_update_list) begin
+                cs_is_wait_fetch_comp || cs_is_acc_mem || (cs_is_update_list && rd_req_pending) ||
+                (cs_is_update_list && !rd_req_pending && !req_hsked)) begin
         proc_status_w = 3'b010;
     end else begin
         proc_status_w = 3'b000;
@@ -206,8 +218,19 @@ end
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
-        rd_req_pending <= 1'b0;
+        wr_req_pending <= 1'b0;
     end else if(cs_is_allocate_line && req_hsked && acc_status == 3'b010) begin
+        wr_req_pending <= 1'b1;
+    end else if(wr_cs == WAIT_RD_DONE) begin
+        wr_req_pending <= 1'b0;
+    end
+end
+
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        rd_req_pending <= 1'b0;
+    end else if(cs_is_allocate_line && req_hsked) begin
         rd_req_pending <= 1'b1;
     end else if(wr_cs == WAIT_RD_DONE) begin
         rd_req_pending <= 1'b0;
@@ -240,6 +263,8 @@ always_comb begin:WR_FSM
                     wr_ns = WAIT_LOOKUP;
                 end else if(acc_status == 3'b000) begin
                     wr_ns = CHECK_COMFLICT;
+                end else if(acc_status == 3'b011) begin
+                    wr_ns = MSG_REQ;
                 end else if(acc_status == 3'b100) begin
                     wr_ns = WAIT_COMFLICT;
                 end else if(!mem_whsked) begin
@@ -257,6 +282,8 @@ always_comb begin:WR_FSM
                     wr_ns = WAIT_LOOKUP;
                 end else if(acc_status == 3'b000) begin
                     wr_ns = CHECK_COMFLICT;
+                end else if(acc_status == 3'b011) begin
+                    wr_ns = MSG_REQ;
                 end else if(acc_status == 3'b100) begin
                     wr_ns = WAIT_COMFLICT;
                 end else if(!mem_whsked) begin
@@ -272,6 +299,8 @@ always_comb begin:WR_FSM
                     wr_ns = WAIT_LOOKUP;
                 end else if(acc_status == 3'b000) begin
                     wr_ns = CHECK_COMFLICT;
+                end else if(acc_status == 3'b011) begin
+                    wr_ns = MSG_REQ;
                 end else if(acc_status == 3'b100) begin
                     wr_ns = WAIT_COMFLICT;
                 end else if(!mem_whsked) begin
@@ -301,15 +330,34 @@ always_comb begin:WR_FSM
         end
 
         ALLOCATE_LINE: begin
-            if(req_hsked && acc_status == 3'b010) begin
-                wr_ns = WR_REQ;
-            end else if(req_hsked && acc_status != 3'b010) begin
-                wr_ns = RD_REQ;
+            if(req_hsked) begin
+                wr_ns = MSG_REQ;
             end else begin
                 wr_ns = ALLOCATE_LINE;
             end
         end
 
+        MSG_REQ: begin
+            if(msg_hsked) begin
+                wr_ns = WAIT_MSG_RSP;
+            end else begin
+                wr_ns = MSG_REQ;
+            end
+        end
+
+        WAIT_MSG_RSP: begin
+            if(msg_valid) begin
+                if(wr_req_pending) begin
+                    wr_ns = WR_REQ;
+                end else if(rd_req_pending) begin
+                    wr_ns = RD_REQ;
+                end else begin
+                    wr_ns = WAIT_LOOKUP;
+                end
+            end else begin
+                wr_ns = WAIT_MSG_RSP;
+            end
+        end
 
 
         WR_REQ: begin
@@ -372,7 +420,7 @@ always_comb begin:WR_FSM
 
         WAIT_COMFLICT: begin
             if(comflict_clear) begin
-                wr_ns = ACC_MEM;
+                wr_ns = WAIT_LOOKUP;
             end else begin
                 wr_ns = WAIT_COMFLICT;
             end
@@ -391,19 +439,23 @@ assign fetch_tag = return_tag_ff;
 
 always_comb begin
     acc_req = 1'b0;
-    acc_cmd = 2'b0;
+    acc_cmd = 3'b0;
     acc_tag = 0;
     if(wr_hsked || wr_cs == WAIT_LOOKUP) begin
         acc_req = 1'b1;
-        acc_cmd = 2'b00;
+        acc_cmd = 3'b00;
         acc_tag = 0;
     end else if(cs_is_allocate_line) begin
         acc_req = 1'b1;
-        acc_cmd = 2'b10;
+        acc_cmd = 3'b10;
         acc_tag = 0;
-    end else if(wr_cs == UPDATE_LIST) begin
+    end else if(wr_cs == UPDATE_LIST && rd_req_pending) begin
         acc_req = 1'b1;
-        acc_cmd = 2'b11;
+        acc_cmd = 3'b11;
+        acc_tag = return_tag_ff;
+    end else if(wr_cs == UPDATE_LIST && !rd_req_pending) begin
+        acc_req = 1'b1;
+        acc_cmd = 3'b100;
         acc_tag = return_tag_ff;
     end
 end
@@ -437,6 +489,8 @@ always_ff@(posedge clk or negedge rst_n) begin
         fetch_cmd <= 2'b00;
     end else if(cs_is_allocate_line && req_hsked && acc_status == 3'b001) begin
         fetch_cmd <= 2'b01;
+    end else if(cs_is_allocate_line && req_hsked && acc_status == 3'b011) begin
+        fetch_cmd <= 2'b01;
     end else if(cs_is_allocate_line && req_hsked && acc_status == 3'b000) begin
         fetch_cmd <= 2'b01;
     end else if(wr_cs == UPDATE_LIST && rd_req_pending && req_hsked) begin
@@ -455,7 +509,14 @@ always_comb begin
     // end
 
 end
+// msg
+// 3'b010 : rd_normal_ack
+// 3'b011 : rd_share_ack
+// 3'b000 : wr_normal_ack
+// 3'b100 : wr_req
+// 3'b101 : rd_req
+assign msg_req = wr_cs == MSG_REQ;
 
-
+assign msg = 3'b100;
 
 endmodule

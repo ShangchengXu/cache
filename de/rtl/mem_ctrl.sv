@@ -49,6 +49,14 @@ logic fetch_rhsked;
 logic whsked;
 logic rhsked;
 
+logic [1:0] mem_wr_req;
+
+logic [1:0] mem_rd_req;
+
+logic [1:0] mem_wr_gnt;
+
+logic [1:0] mem_rd_gnt;
+
 always_ff @( posedge clk ) begin
     if(local_mem_wen)
         mem[local_mem_waddr] <= local_mem_wdata;
@@ -63,12 +71,12 @@ assign rhsked = mem_ren && mem_rready;
 assign local_mem_wen = whsked || fetch_whsked;
 assign local_mem_ren = rhsked || fetch_rhsked;
 
-assign wr_rd_conflict = (whsked && rhsked) && (local_mem_raddr == local_mem_waddr);
+assign wr_rd_conflict = (local_mem_wen && local_mem_ren) && (local_mem_raddr == local_mem_waddr);
 
-assign local_mem_waddr = fetch_mem_wen ? fetch_mem_waddr : mem_waddr;
-assign local_mem_raddr = fetch_mem_ren ? fetch_mem_raddr : mem_raddr;
+assign local_mem_waddr = fetch_whsked ? fetch_mem_waddr : mem_waddr;
+assign local_mem_raddr = fetch_rhsked ? fetch_mem_raddr : mem_raddr;
 
-assign local_mem_wdata = fetch_mem_wen ? fetch_mem_wdata : mem_wdata;
+assign local_mem_wdata = fetch_hsked ? fetch_mem_wdata : mem_wdata;
 
 always_ff @(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
@@ -93,14 +101,8 @@ end
 always_ff @(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         local_mem_rdata <= 0;
-    end else if(wr_rd_conflict && (mem_rpri < mem_wpri)) begin
+    end else if(wr_rd_conflict) begin
         local_mem_rdata <= local_mem_wdata;
-    end else if(wr_rd_conflict && (mem_rpri > mem_wpri)) begin
-        local_mem_rdata <= mem[local_mem_raddr];
-    end else if(wr_rd_conflict && (mem_rpri == mem_wpri)) begin
-        local_mem_rdata <= local_mem_wdata;
-    // end else if(wr_rd_conflict)begin
-    //     local_mem_rdata <= local_mem_wdata;
     end else if(local_mem_ren) begin
         local_mem_rdata <= mem[local_mem_raddr];
     end
@@ -110,12 +112,32 @@ assign mem_rdata = local_mem_rdata;
 
 assign fetch_mem_rdata = local_mem_rdata;
 
-assign mem_wready = !fetch_mem_wen;
+assign mem_wr_req = {fetch_mem_wen, mem_wen};
 
-assign mem_rready = !fetch_mem_ren;
+assign mem_rd_req = {fetch_mem_ren, mem_ren};
 
-assign fetch_mem_rready = 1'b1;
+assign {fetch_mem_rready, mem_rready} = mem_rd_gnt;
 
-assign fetch_mem_wready = 1'b1;
+assign {fetch_mem_wready, mem_wready} = mem_wr_gnt;
+
+cache_rr_arb #(
+        .WIDTH       (2       ),
+        .REFLECTION  (0       ))
+             cache_rr_arb_wr_inst (
+        .clk         (clk                ) ,//input   
+        .rst_n       (rst_n              ) ,//input   
+        .req         (mem_wr_req         ) ,//input   [WIDTH - 1 : 0]
+        .req_end     (mem_wr_gnt         ) ,//input   [WIDTH - 1 : 0]
+        .gnt         (mem_wr_gnt         ));//output  [WIDTH - 1 : 0]
+
+cache_rr_arb #(
+        .WIDTH       (2       ),
+        .REFLECTION  (0       ))
+             cache_rr_arb_rd_inst (
+        .clk         (clk                ) ,//input   
+        .rst_n       (rst_n              ) ,//input   
+        .req         (mem_rd_req         ) ,//input   [WIDTH - 1 : 0]
+        .req_end     (mem_rd_gnt         ) ,//input   [WIDTH - 1 : 0]
+        .gnt         (mem_rd_gnt         ));//output  [WIDTH - 1 : 0]
 
 endmodule

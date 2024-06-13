@@ -9,7 +9,7 @@ module list_ctrl
                 // port0
                 input  logic [index_lenth - 1 :0]          acc_index_0,
                 output logic [2:0]                         acc_status_0,
-                input  logic [1:0]                         acc_cmd_0,
+                input  logic [2:0]                         acc_cmd_0,
                 input  logic [$clog2(lists_depth) - 1 : 0] acc_tag_0,
                 output logic [$clog2(lists_depth) - 1 : 0] return_tag_0,
                 output logic [index_lenth         - 1 : 0] return_index_0,
@@ -20,7 +20,7 @@ module list_ctrl
                 // port1
                 input  logic [index_lenth - 1 :0]          acc_index_1,
                 output logic [2:0]                         acc_status_1,
-                input  logic [1:0]                         acc_cmd_1,
+                input  logic [2:0]                         acc_cmd_1,
                 input  logic [$clog2(lists_depth) - 1 : 0] acc_tag_1,
                 output logic [$clog2(lists_depth) - 1 : 0] return_tag_1,
                 output logic [index_lenth         - 1 : 0] return_index_1,
@@ -82,13 +82,13 @@ always_comb begin
         allocate_busy = 1'b0;
     end else if(tag_table[lru_list.tail].status[2]) begin
         allocate_busy = 1'b1;
-    end else if(acc_req_0 && acc_cmd_0 == 2'b00 && hit_tag_0 == lru_list.tail) begin
+    end else if(acc_req_0 && acc_cmd_0 == 3'b00 && hit_tag_0 == lru_list.tail) begin
         allocate_busy = 1'b1;
-    end else if(acc_req_0 && acc_cmd_0 == 2'b01 && hit_tag_0 == lru_list.tail) begin
+    end else if(acc_req_0 && acc_cmd_0 == 3'b01 && hit_tag_0 == lru_list.tail) begin
         allocate_busy = 1'b1;
-    end else if(acc_req_1 && acc_cmd_1 == 2'b00 && hit_tag_1 == lru_list.tail) begin
+    end else if(acc_req_1 && acc_cmd_1 == 3'b00 && hit_tag_1 == lru_list.tail) begin
         allocate_busy = 1'b1;
-    end else if(acc_req_1 && acc_cmd_1 == 2'b01 && hit_tag_1 == lru_list.tail) begin
+    end else if(acc_req_1 && acc_cmd_1 == 3'b01 && hit_tag_1 == lru_list.tail) begin
         allocate_busy = 1'b1;
     end else begin
         allocate_busy = 1'b0;
@@ -97,7 +97,7 @@ end
 
 always_comb begin
     acc_gnt_0 = 1'b1;
-    if(acc_cmd_0 == 2'b10 && allocate_busy) begin
+    if(acc_cmd_0 == 3'b10 && allocate_busy) begin
         acc_gnt_0 = 1'b0;
     end else if(acc_cmd_0 == 3'b00 && tag_table[hit_tag_0].status == 3'b110) begin
         acc_gnt_0 = 1'b0;
@@ -107,7 +107,7 @@ end
 
 always_comb begin
     acc_gnt_1 = 1'b1;
-    if(acc_cmd_1 == 2'b10 && allocate_busy) begin
+    if(acc_cmd_1 == 3'b10 && allocate_busy) begin
         acc_gnt_1 = 1'b0;
     end else if(acc_cmd_1 == 3'b00 && tag_table[hit_tag_1].status == 3'b110) begin
         acc_gnt_1 = 1'b0;
@@ -119,7 +119,7 @@ always_comb begin
     acc_hit_0 = 1'b0;
     for(integer i = 0; i < lists_depth; i++) begin
         if(tag_table[i].status != 3'b000 && tag_table[i].index == acc_index_0 &&
-                                (acc_cmd_0 == 2'b01 || acc_cmd_0 == 2'b00)) begin
+                                (acc_cmd_0 == 3'b01 || acc_cmd_0 == 3'b00)) begin
             hit_tag_0 = i;
             acc_hit_0 = 1'b1;
         end
@@ -133,7 +133,7 @@ always_comb begin
     acc_hit_1 = 1'b0;
     for(integer i = 0; i < lists_depth; i++) begin
         if(tag_table[i].status != 3'b000 && tag_table[i].index == acc_index_1 &&
-                                 (acc_cmd_1 == 2'b01 || acc_cmd_1 == 2'b00)) begin
+                                 (acc_cmd_1 == 3'b01 || acc_cmd_1 == 3'b00)) begin
             hit_tag_1 = i;
             acc_hit_1 = 1'b1;
         end
@@ -143,11 +143,11 @@ end
 assign proc_tag_0 = acc_hit_0 ? hit_tag_0 : return_tag_0;
 assign proc_tag_1 = acc_hit_1 ? hit_tag_1 : return_tag_1;
 
-assign proc_hit_0 = acc_hsked_0 && acc_hit_0 || ((acc_cmd_0 == 2'b10) && acc_hsked_0 && free_list.empty);
-assign proc_hit_1 = acc_hsked_1 && acc_hit_1 || ((acc_cmd_1 == 2'b10) && acc_hsked_1 && (free_list.empty || (free_list.length <= 1 && allocate_0)));
+assign proc_hit_0 = acc_hsked_0 && acc_hit_0 || ((acc_cmd_0 == 3'b10) && acc_hsked_0 && free_list.empty);
+assign proc_hit_1 = acc_hsked_1 && acc_hit_1 || ((acc_cmd_1 == 3'b10) && acc_hsked_1 && (free_list.empty || (free_list.length <= 1 && allocate_0)));
 
-assign allocate_0 = (acc_cmd_0 == 2'b10) && acc_hsked_0 && !free_list.empty;
-assign allocate_1 = (acc_cmd_1 == 2'b10) && acc_hsked_1 && ((free_list.length > 1) || (!allocate_0 && !free_list.empty));
+assign allocate_0 = (acc_cmd_0 == 3'b10) && acc_hsked_0 && !free_list.empty;
+assign allocate_1 = (acc_cmd_1 == 3'b10) && acc_hsked_1 && ((free_list.length > 1) || (!allocate_0 && !free_list.empty));
 
 
 assign tag0_is_head = proc_tag_0 == lru_list.head && !lru_list.empty;
@@ -165,11 +165,11 @@ always_comb begin
     return_tag_0 = 0;
     if(allocate_0) begin
         return_tag_0 = free_list.tail;
-    end else if((acc_cmd_0 == 2'b10)&& acc_hsked_0 && free_list.empty) begin
+    end else if((acc_cmd_0 == 3'b10)&& acc_hsked_0 && free_list.empty) begin
         return_tag_0 = lru_list.tail;
-    end else if(acc_hsked_0 && acc_cmd_0 == 2'b00 && acc_hit_0) begin
+    end else if(acc_hsked_0 && acc_cmd_0 == 3'b00 && acc_hit_0) begin
         return_tag_0 = hit_tag_0;
-    end else if(acc_hsked_0 && acc_cmd_0 == 2'b01 && acc_hit_0) begin
+    end else if(acc_hsked_0 && acc_cmd_0 == 3'b01 && acc_hit_0) begin
         return_tag_0 = hit_tag_0;
     end
 end
@@ -183,15 +183,15 @@ always_comb begin
         end else begin
             return_tag_1 = free_list.tail;
         end
-    end else if((acc_cmd_1 == 2'b10)&& acc_hsked_1 && free_list.empty) begin
-        if((acc_cmd_0 == 2'b10)&& acc_hsked_0) begin
+    end else if((acc_cmd_1 == 3'b10)&& acc_hsked_1 && free_list.empty) begin
+        if((acc_cmd_0 == 3'b10)&& acc_hsked_0) begin
             return_tag_1 = tag_table[lru_list.tail].pre_tag;
         end else begin
             return_tag_1 = lru_list.tail;
         end
-    end else if(acc_hsked_1 && acc_cmd_1 == 2'b00 && acc_hit_1) begin
+    end else if(acc_hsked_1 && acc_cmd_1 == 3'b00 && acc_hit_1) begin
         return_tag_1 = hit_tag_1;
-    end else if(acc_hsked_1 && acc_cmd_1 == 2'b01 && acc_hit_1) begin
+    end else if(acc_hsked_1 && acc_cmd_1 == 3'b01 && acc_hit_1) begin
         return_tag_1 = hit_tag_1;
     end
 end
@@ -525,19 +525,19 @@ generate
             end
 
             3'b001: begin
-                if(acc_hsked_0 && acc_cmd_0 == 2'b10 && return_tag_0 == i) begin
+                if(acc_hsked_0 && acc_cmd_0 == 3'b10 && return_tag_0 == i) begin
                     tag_table[i].nxt_status = 3'b100;
                     tag_table[i].nxt_index = acc_index_0;
-                end else if(acc_hsked_1 && acc_cmd_1 == 2'b10 && return_tag_1 == i) begin
+                end else if(acc_hsked_1 && acc_cmd_1 == 3'b10 && return_tag_1 == i) begin
                     tag_table[i].nxt_status = 3'b100;
                     tag_table[i].nxt_index = acc_index_1;
-                end else if(acc_hsked_0 && acc_tag_0 == i && acc_cmd_0 == 2'b11) begin
+                end else if(acc_hsked_0 && acc_tag_0 == i && acc_cmd_0 == 3'b11) begin
                     tag_table[i].nxt_status = 3'b010;
                     tag_table[i].nxt_index = tag_table[i].index;
-                end else if(acc_hsked_0 && return_tag_0 == i && acc_hit_0 && acc_cmd_0 == 2'b00) begin
+                end else if(acc_hsked_0 && return_tag_0 == i && acc_hit_0 && acc_cmd_0 == 3'b00) begin
                     tag_table[i].nxt_status = 3'b010;
                     tag_table[i].nxt_index = tag_table[i].index;
-                end else if(acc_hsked_1 && return_tag_1 == i && acc_hit_1 && acc_cmd_1 == 2'b00) begin
+                end else if(acc_hsked_1 && return_tag_1 == i && acc_hit_1 && acc_cmd_1 == 3'b00) begin
                     tag_table[i].nxt_status = 3'b010;
                     tag_table[i].nxt_index = tag_table[i].index;
                 end else begin
@@ -547,10 +547,10 @@ generate
             end
 
             3'b010: begin
-                if(acc_hsked_0 && acc_cmd_0 == 2'b10 && return_tag_0 == i) begin
+                if(acc_hsked_0 && acc_cmd_0 == 3'b10 && return_tag_0 == i) begin
                     tag_table[i].nxt_status = 3'b110;
                     tag_table[i].nxt_index = tag_table[i].index;
-                end else if(acc_hsked_1 && acc_cmd_1 == 2'b10 && return_tag_1 == i) begin
+                end else if(acc_hsked_1 && acc_cmd_1 == 3'b10 && return_tag_1 == i) begin
                     tag_table[i].nxt_status = 3'b110;
                     tag_table[i].nxt_index = tag_table[i].index;
                 end else begin
@@ -560,11 +560,23 @@ generate
             end
 
             3'b100: begin
-                if(acc_hsked_0 && acc_tag_0 == i && acc_cmd_0 == 2'b11) begin
+                if(acc_hsked_0 && acc_tag_0 == i && acc_cmd_0 == 3'b100) begin
                     tag_table[i].nxt_status = 3'b010;
                     tag_table[i].nxt_index = tag_table[i].index;
-                end else if(acc_hsked_1 && acc_tag_1 == i && acc_cmd_1 == 2'b11) begin
+                end else if(acc_hsked_1 && acc_tag_1 == i && acc_cmd_1 == 3'b100) begin
+                    tag_table[i].nxt_status = 3'b010;
+                    tag_table[i].nxt_index = tag_table[i].index;
+                end else if(acc_hsked_0 && acc_tag_0 == i && acc_cmd_0 == 3'b101) begin
                     tag_table[i].nxt_status = 3'b001;
+                    tag_table[i].nxt_index = tag_table[i].index;
+                end else if(acc_hsked_1 && acc_tag_1 == i && acc_cmd_1 == 3'b101) begin
+                    tag_table[i].nxt_status = 3'b001;
+                    tag_table[i].nxt_index = tag_table[i].index;
+                end else if(acc_hsked_0 && acc_tag_0 == i && acc_cmd_0 == 3'b110) begin
+                    tag_table[i].nxt_status = 3'b011;
+                    tag_table[i].nxt_index = tag_table[i].index;
+                end else if(acc_hsked_1 && acc_tag_1 == i && acc_cmd_1 == 3'b110) begin
+                    tag_table[i].nxt_status = 3'b011;
                     tag_table[i].nxt_index = tag_table[i].index;
                 end else begin
                     tag_table[i].nxt_status = tag_table[i].status;
@@ -573,10 +585,10 @@ generate
             end
 
             3'b110: begin
-                if(acc_hsked_0 && acc_tag_0 == i && acc_cmd_0 == 2'b11) begin
+                if(acc_hsked_0 && acc_tag_0 == i && acc_cmd_0 == 3'b11) begin
                     tag_table[i].nxt_status = 3'b100;
                     tag_table[i].nxt_index = acc_index_0;
-                end else if(acc_hsked_1 && acc_tag_1 == i && acc_cmd_1 == 2'b11) begin
+                end else if(acc_hsked_1 && acc_tag_1 == i && acc_cmd_1 == 3'b11) begin
                     tag_table[i].nxt_status = 3'b100;
                     tag_table[i].nxt_index = acc_index_1;
                 end else begin
@@ -604,10 +616,10 @@ endgenerate
 always_comb begin
     acc_status_0 = 2'b00;
     return_index_0 = 0;
-    if((acc_cmd_0 == 2'b00 || acc_cmd_0 == 2'b01) && acc_hit_0) begin
+    if((acc_cmd_0 == 3'b00 || acc_cmd_0 == 3'b01) && acc_hit_0) begin
         acc_status_0 = tag_table[hit_tag_0].status;
         return_index_0 = tag_table[hit_tag_0].index;
-    end else if(acc_cmd_0 == 2'b10 && acc_hsked_0) begin
+    end else if(acc_cmd_0 == 3'b10 && acc_hsked_0) begin
         acc_status_0 = tag_table[return_tag_0].status;
         return_index_0 = tag_table[return_tag_0].index;
     end
@@ -616,10 +628,10 @@ end
 always_comb begin
     acc_status_1 = 2'b00;
     return_index_1 = 0;
-    if((acc_cmd_1 == 2'b00 || acc_cmd_1 == 2'b01) && acc_hit_1) begin
+    if((acc_cmd_1 == 3'b00 || acc_cmd_1 == 3'b01) && acc_hit_1) begin
         acc_status_1 = tag_table[hit_tag_1].status;
         return_index_1 = tag_table[hit_tag_1].index;
-    end else if(acc_cmd_1 == 2'b10 && acc_hsked_1) begin
+    end else if(acc_cmd_1 == 3'b10 && acc_hsked_1) begin
         acc_status_1 = tag_table[return_tag_1].status;
         return_index_1 = tag_table[return_tag_1].index;
     end
