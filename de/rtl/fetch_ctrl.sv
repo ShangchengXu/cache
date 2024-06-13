@@ -12,7 +12,7 @@ module fetch_ctrl
                     input    logic [1:0]                                        fetch_cmd_0,
                     input    logic                                              fetch_req_0,
                     input    logic [$clog2(list_depth) - 1 : 0]                 fetch_tag_0,
-                    input    logic [addr_0idth - 1 : 0]                         fetch_addr_0,
+                    input    logic [addr_width - 1 : 0]                         fetch_addr_0,
                     output   logic                                              fetch_gnt_0,
                     output   logic                                              fetch_done_0,
 
@@ -62,6 +62,14 @@ logic [addr_width - 1 :0 ] local_addr_w;
 logic [addr_width - 1 :0 ] local_addr_pre_w;
 logic [1:0] local_cmd_w;
 
+logic fetch_rd_req_0;
+logic fetch_rd_req_1;
+logic fetch_wr_req_0;
+logic fetch_wr_req_1;
+logic [1:0] fetch_rd_req;
+logic [1:0] fetch_wr_req;
+logic [1:0] fetch_rd_gnt;
+logic [1:0] fetch_wr_gnt;
 
 logic [$clog2(list_depth)  - 1 : 0] local_tag_r;
 logic [1:0] local_owner_r;
@@ -69,7 +77,7 @@ logic [addr_width - 1 :0 ] local_addr_r;
 logic [addr_width - 1 :0 ] local_addr_pre_r;
 logic [1:0] local_cmd_r;
 
-logic fetch_hsked_w, fetch_hsked_r;
+logic fetch_hsked_0, fetch_hsked_1;
 logic local_done;
 logic wr_state_done;
 logic rd_state_done;
@@ -97,8 +105,14 @@ typedef enum logic [3:0] {
 } rd_state_t;
 rd_state_t rd_cs,rd_ns;
 
-assign fetch_hsked_w = fetch_req_w && fetch_gnt_w;
-assign fetch_hsked_r = fetch_req_r && fetch_gnt_r;
+assign fetch_rd_req_0 = fetch_req_0 && fetch_cmd_0 == 2'b01;
+assign fetch_rd_req_1 = fetch_req_1 && fetch_cmd_1 == 2'b01;
+
+assign fetch_wr_req_0 = fetch_req_0 && fetch_cmd_0 == 2'b00;
+assign fetch_wr_req_1 = fetch_req_1 && fetch_cmd_1 == 2'b00;
+
+assign fetch_hsked_0 = fetch_req_0 && fetch_gnt_0;
+assign fetch_hsked_1 = fetch_req_1 && fetch_gnt_1;
 assign wr_hsked = wr_req && wr_gnt;
 assign rd_hsked = rd_req && rd_gnt;
 assign wr_data_hsked = wr_valid && wr_ready;
@@ -299,37 +313,64 @@ assign wr_req = wr_cs == WR_REQ;
 
 assign wr_len = list_width * data_width / 8;
 
-assign wr_addr = {local_addr_pre[addr_width - 1 : $clog2(list_width)],{$clog2(list_width){1'b0}}};
+assign wr_addr = {local_addr_w[addr_width - 1 : $clog2(list_width)],{$clog2(list_width){1'b0}}};
 
 assign rd_req = rd_cs == RD_REQ;
 
 assign rd_len = list_width * data_width / 8;
 
-assign rd_addr = {local_addr[addr_width - 1 : $clog2(list_width)],{$clog2(list_width){1'b0}}};
+assign rd_addr = {local_addr_r[addr_width - 1 : $clog2(list_width)],{$clog2(list_width){1'b0}}};
 
-always_comb  begin
-    if(fetch_req_0 && fetch_cmd_0 == 2'b00) begin
-        fetch_gnt_0 = wr_cs == IDLE;
-    end else if(fetch_req_0 && fetch_cmd_1 == 2'b01) begin
-        fetch_gnt_0 = rd_cs == IDLE;
-    end else begin
-        fetch_gnt_0 = 1'b0;
-    end
-end
+// always_comb  begin
+//     if(fetch_req_0 && fetch_cmd_0 == 2'b00) begin
+//         fetch_gnt_0 = wr_cs == WR_IDLE;
+//     end else if(fetch_req_0 && fetch_cmd_1 == 2'b01) begin
+//         fetch_gnt_0 = rd_cs == RD_IDLE;
+//     end else begin
+//         fetch_gnt_0 = 1'b0;
+//     end
+// end
 
 
-always_comb  begin
-    if(fetch_req_1 && fetch_cmd_1 == 2'b00) begin
-        fetch_gnt_0 = wr_cs == IDLE && !(fetch_req_0 && fetch_cmd_0 == 2'b00);
-    end else if(fetch_req_0 && fetch_cmd_1 == 2'b01) begin
-        fetch_gnt_0 = rd_cs == IDLE && !(fetch_req_0 && fetch_cmd_0 == 2'b01);
-    end else begin
-        fetch_gnt_0 = 1'b0;
-    end
-end
+// always_comb  begin
+//     if(fetch_req_1 && fetch_cmd_1 == 2'b00) begin
+//         fetch_gnt_1 = wr_cs == WR_IDLE && !(fetch_req_0 && fetch_cmd_0 == 2'b00);
+//     end else if(fetch_req_1 && fetch_cmd_1 == 2'b01) begin
+//         fetch_gnt_1 = rd_cs == RD_IDLE && !(fetch_req_0 && fetch_cmd_0 == 2'b01);
+//     end else begin
+//         fetch_gnt_1 = 1'b0;
+//     end
+// end
 
 assign fetch_done_0 = rd_state_done && local_owner_r == 2'b00 || wr_state_done && local_owner_w == 2'b00;
 assign fetch_done_1 = rd_state_done && local_owner_r == 2'b01 || wr_state_done && local_owner_w == 2'b01;
+
+assign fetch_rd_req = rd_cs == RD_IDLE ? {fetch_rd_req_1, fetch_rd_req_0} : 2'b0;
+assign fetch_wr_req = wr_cs == WR_IDLE ? {fetch_wr_req_1, fetch_wr_req_0} : 2'b0;
+
+assign fetch_gnt_0 = fetch_rd_gnt[0] || fetch_wr_gnt[0];
+assign fetch_gnt_1 = fetch_rd_gnt[1] || fetch_wr_gnt[1];
+
+cache_rr_arb #(
+        .WIDTH       (2       ),
+        .REFLECTION  (0       ))
+             cache_rr_arb_wr_inst (
+        .clk         (clk                ) ,//input   
+        .rst_n       (rst_n              ) ,//input   
+        .req         (fetch_wr_req       ) ,//input   [WIDTH - 1 : 0]
+        .req_end     (fetch_wr_gnt       ) ,//input   [WIDTH - 1 : 0]
+        .gnt         (fetch_wr_gnt       ));//output  [WIDTH - 1 : 0]
+
+
+cache_rr_arb #(
+        .WIDTH       (2       ),
+        .REFLECTION  (0       ))
+             cache_rr_arb_rd_inst (
+        .clk         (clk               ) ,//input   
+        .rst_n       (rst_n             ) ,//input   
+        .req         (fetch_rd_req      ) ,//input   [WIDTH - 1 : 0]
+        .req_end     (fetch_rd_gnt      ) ,//input   [WIDTH - 1 : 0]
+        .gnt         (fetch_rd_gnt      ));//output  [WIDTH - 1 : 0]
 
 
 endmodule
