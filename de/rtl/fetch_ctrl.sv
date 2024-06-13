@@ -24,6 +24,15 @@ module fetch_ctrl
                     output    logic                                              fetch_gnt_1,
                     output    logic                                              fetch_done_1,
 
+
+
+                    input     logic [1:0]                                        fetch_cmd_2,
+                    input     logic                                              fetch_req_2,
+                    input     logic [$clog2(list_depth) - 1 : 0]                 fetch_tag_2,
+                    input     logic [addr_width - 1 : 0]                         fetch_addr_2,
+                    output    logic                                              fetch_gnt_2,
+                    output    logic                                              fetch_done_2,
+
                     output   logic  [$clog2(list_depth * list_width) - 1 : 0]   fetch_mem_raddr,
                     output   logic                                              fetch_mem_ren,
                     input    logic                                              fetch_mem_rready,
@@ -66,10 +75,10 @@ logic fetch_rd_req_0;
 logic fetch_rd_req_1;
 logic fetch_wr_req_0;
 logic fetch_wr_req_1;
-logic [1:0] fetch_rd_req;
-logic [1:0] fetch_wr_req;
-logic [1:0] fetch_rd_gnt;
-logic [1:0] fetch_wr_gnt;
+logic [2:0] fetch_rd_req;
+logic [2:0] fetch_wr_req;
+logic [2:0] fetch_rd_gnt;
+logic [2:0] fetch_wr_gnt;
 
 logic [$clog2(list_depth)  - 1 : 0] local_tag_r;
 logic [1:0] local_owner_r;
@@ -138,6 +147,10 @@ always_ff@(posedge clk or negedge rst_n) begin
         local_addr_w <= fetch_addr_1;
         local_owner_w <= 2'b01;
         local_tag_w <= fetch_tag_1;
+    end else if(fetch_hsked_3 && fetch_cmd_3 == 2'b00)begin
+        local_addr_w <= fetch_addr_3;
+        local_owner_w <= 2'b10;
+        local_tag_w <= fetch_tag_3;
     end
 end
 
@@ -155,6 +168,10 @@ always_ff@(posedge clk or negedge rst_n) begin
         local_addr_r <= fetch_addr_1;
         local_owner_r <= 2'b01;
         local_tag_r <= fetch_tag_1;
+    end else if(fetch_hsked_3 && fetch_cmd_3 == 2'b01)begin
+        local_addr_r <= fetch_addr_3;
+        local_owner_r <= 2'b10;
+        local_tag_r <= fetch_tag_3;
     end
 end
 
@@ -183,6 +200,7 @@ always_comb begin:RD_FSM
 
     RD_IDLE:begin
         if(fetch_hsked_0 && fetch_cmd_0 == 2'b01 ||
+           fetch_hsked_2 && fetch_cmd_2 == 2'b01 ||
             fetch_hsked_1 && fetch_cmd_1 == 2'b01) begin
             rd_ns = RD_REQ;
         end else begin
@@ -222,6 +240,7 @@ always_comb begin:WR_FSM
 
         WR_IDLE: begin
             if(fetch_hsked_0 && fetch_cmd_0 == 2'b00 ||
+                fetch_hsked_2 && fetch_cmd_2 == 2'b00 ||
                 fetch_hsked_1 && fetch_cmd_1 == 2'b00) begin
                 wr_ns = WR_REQ;
             end else begin
@@ -344,15 +363,17 @@ assign rd_addr = {local_addr_r[addr_width - 1 : $clog2(list_width)],{$clog2(list
 
 assign fetch_done_0 = rd_state_done && local_owner_r == 2'b00 || wr_state_done && local_owner_w == 2'b00;
 assign fetch_done_1 = rd_state_done && local_owner_r == 2'b01 || wr_state_done && local_owner_w == 2'b01;
+assign fetch_done_2 = rd_state_done && local_owner_r == 2'b10 || wr_state_done && local_owner_w == 2'b10;
 
-assign fetch_rd_req = rd_cs == RD_IDLE ? {fetch_rd_req_1, fetch_rd_req_0} : 2'b0;
-assign fetch_wr_req = wr_cs == WR_IDLE ? {fetch_wr_req_1, fetch_wr_req_0} : 2'b0;
+assign fetch_rd_req = rd_cs == RD_IDLE ? {fetch_rd_req_3, fetch_rd_req_1, fetch_rd_req_0} : 2'b0;
+assign fetch_wr_req = wr_cs == WR_IDLE ? {fetch_wr_req_3, fetch_wr_req_1, fetch_wr_req_0} : 2'b0;
 
 assign fetch_gnt_0 = fetch_rd_gnt[0] || fetch_wr_gnt[0];
 assign fetch_gnt_1 = fetch_rd_gnt[1] || fetch_wr_gnt[1];
+assign fetch_gnt_2 = fetch_rd_gnt[2] || fetch_wr_gnt[2];
 
 cache_rr_arb #(
-        .WIDTH       (2       ),
+        .WIDTH       (3       ),
         .REFLECTION  (0       ))
              cache_rr_arb_wr_inst (
         .clk         (clk                ) ,//input   
@@ -363,7 +384,7 @@ cache_rr_arb #(
 
 
 cache_rr_arb #(
-        .WIDTH       (2       ),
+        .WIDTH       (3       ),
         .REFLECTION  (0       ))
              cache_rr_arb_rd_inst (
         .clk         (clk               ) ,//input   
