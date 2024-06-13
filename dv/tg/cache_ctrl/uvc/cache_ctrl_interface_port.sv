@@ -3,6 +3,8 @@ parameter lists_depth = 4;
 parameter mem_depth = 32;
 parameter data_width = 32;
 parameter addr_width = 32;
+parameter cache_num = 2;
+parameter cache_id = 0;
 parameter list_depth = 4;
 parameter list_width = 32;
 logic clk;
@@ -34,6 +36,11 @@ logic rd_done;
 logic rd_valid;
 logic rd_ready;
 
+logic                                     msg_req;
+logic                                     msg_gnt;
+logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg;
+logic                                     msg_in_valid;
+logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg_in;
 
 
 

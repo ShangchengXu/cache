@@ -73,8 +73,10 @@ logic [1:0] local_cmd_w;
 
 logic fetch_rd_req_0;
 logic fetch_rd_req_1;
+logic fetch_rd_req_2;
 logic fetch_wr_req_0;
 logic fetch_wr_req_1;
+logic fetch_wr_req_2;
 logic [2:0] fetch_rd_req;
 logic [2:0] fetch_wr_req;
 logic [2:0] fetch_rd_gnt;
@@ -86,7 +88,7 @@ logic [addr_width - 1 :0 ] local_addr_r;
 logic [addr_width - 1 :0 ] local_addr_pre_r;
 logic [1:0] local_cmd_r;
 
-logic fetch_hsked_0, fetch_hsked_1;
+logic fetch_hsked_0, fetch_hsked_1, fetch_hsked_2;
 logic local_done;
 logic wr_state_done;
 logic rd_state_done;
@@ -116,12 +118,15 @@ rd_state_t rd_cs,rd_ns;
 
 assign fetch_rd_req_0 = fetch_req_0 && fetch_cmd_0 == 2'b01;
 assign fetch_rd_req_1 = fetch_req_1 && fetch_cmd_1 == 2'b01;
+assign fetch_rd_req_2 = fetch_req_1 && fetch_cmd_1 == 2'b01;
 
 assign fetch_wr_req_0 = fetch_req_0 && fetch_cmd_0 == 2'b00;
 assign fetch_wr_req_1 = fetch_req_1 && fetch_cmd_1 == 2'b00;
+assign fetch_wr_req_2 = fetch_req_2 && fetch_cmd_2 == 2'b00;
 
 assign fetch_hsked_0 = fetch_req_0 && fetch_gnt_0;
 assign fetch_hsked_1 = fetch_req_1 && fetch_gnt_1;
+assign fetch_hsked_2 = fetch_req_2 && fetch_gnt_2;
 assign wr_hsked = wr_req && wr_gnt;
 assign rd_hsked = rd_req && rd_gnt;
 assign wr_data_hsked = wr_valid && wr_ready;
@@ -147,10 +152,10 @@ always_ff@(posedge clk or negedge rst_n) begin
         local_addr_w <= fetch_addr_1;
         local_owner_w <= 2'b01;
         local_tag_w <= fetch_tag_1;
-    end else if(fetch_hsked_3 && fetch_cmd_3 == 2'b00)begin
-        local_addr_w <= fetch_addr_3;
+    end else if(fetch_hsked_2 && fetch_cmd_2 == 2'b00)begin
+        local_addr_w <= fetch_addr_2;
         local_owner_w <= 2'b10;
-        local_tag_w <= fetch_tag_3;
+        local_tag_w <= fetch_tag_2;
     end
 end
 
@@ -168,10 +173,10 @@ always_ff@(posedge clk or negedge rst_n) begin
         local_addr_r <= fetch_addr_1;
         local_owner_r <= 2'b01;
         local_tag_r <= fetch_tag_1;
-    end else if(fetch_hsked_3 && fetch_cmd_3 == 2'b01)begin
-        local_addr_r <= fetch_addr_3;
+    end else if(fetch_hsked_2 && fetch_cmd_2 == 2'b01)begin
+        local_addr_r <= fetch_addr_2;
         local_owner_r <= 2'b10;
-        local_tag_r <= fetch_tag_3;
+        local_tag_r <= fetch_tag_2;
     end
 end
 
@@ -365,8 +370,8 @@ assign fetch_done_0 = rd_state_done && local_owner_r == 2'b00 || wr_state_done &
 assign fetch_done_1 = rd_state_done && local_owner_r == 2'b01 || wr_state_done && local_owner_w == 2'b01;
 assign fetch_done_2 = rd_state_done && local_owner_r == 2'b10 || wr_state_done && local_owner_w == 2'b10;
 
-assign fetch_rd_req = rd_cs == RD_IDLE ? {fetch_rd_req_3, fetch_rd_req_1, fetch_rd_req_0} : 2'b0;
-assign fetch_wr_req = wr_cs == WR_IDLE ? {fetch_wr_req_3, fetch_wr_req_1, fetch_wr_req_0} : 2'b0;
+assign fetch_rd_req = rd_cs == RD_IDLE ? {fetch_rd_req_2, fetch_rd_req_1, fetch_rd_req_0} : 2'b0;
+assign fetch_wr_req = wr_cs == WR_IDLE ? {fetch_wr_req_2, fetch_wr_req_1, fetch_wr_req_0} : 2'b0;
 
 assign fetch_gnt_0 = fetch_rd_gnt[0] || fetch_wr_gnt[0];
 assign fetch_gnt_1 = fetch_rd_gnt[1] || fetch_wr_gnt[1];

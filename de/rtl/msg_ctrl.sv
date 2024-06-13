@@ -47,8 +47,8 @@ module msg_ctrl #(
                     output   logic                                     msg_req,
                     input    logic                                     msg_gnt,
                     output   logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg,
-                    input    logic                                     rsp_valid,
-                    input    logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg_rsp
+                    input    logic                                     msg_in_valid,
+                    input    logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg_in
                 );
 
 // msg
@@ -70,7 +70,17 @@ logic msg_send_req;
 logic msg_send_gnt;
 msg_t msg_send;
 
+logic [2:0] acc_status_ff;
+
+logic req_fifo_empty;
+logic req_fifo_full;
+logic [4 + 2 * $clog2(cache_num) - 1 : 0] req_fifo_read_data;
+logic [$clog2(cache_num) : 0] req_fifo_data_num;
+logic req_fifo_write;
+logic req_fifo_read;
+msg_t msg_proc;
 msg_t msg_local;
+
 logic [cache_num - 1 : 0] rsp_bitmap_wr;
 logic [1:0]               rsp_owner_wr;
 logic                     msg_wr_proc;
@@ -93,12 +103,12 @@ logic        msg_wr_req_0;
 logic        msg_wr_req_1;
 logic        msg_rd_req_0;
 logic        msg_rd_req_1;
-logic        msg_wr_req;
-logic        msg_wr_gnt;
-logic        msg_rd_req;
-logic        msg_rd_gnt;
-logic [1:0]  msg_req_local;
-logic [1:0]  msg_gnt_local;
+logic [1:0]  msg_wr_req;
+logic [1:0]  msg_wr_gnt;
+logic [1:0]  msg_rd_req;
+logic [1:0]  msg_rd_gnt;
+logic [2:0]  msg_req_local;
+logic [2:0]  msg_gnt_local;
 
 typedef enum logic [3:0] {
     IDLE,
@@ -122,7 +132,7 @@ typedef enum logic [3:0]  {
 msg_req_state_t msg_wr_cs, msg_wr_ns, msg_rd_cs, msg_rd_ns;
 rsp_state_t rsp_cs, rsp_ns;
 
-assign msg_local = msg_rsp;
+assign msg_local = msg_in;
 
 always_ff@(posedge clk or negedge rst_n)begin
     if(!rst_n) begin
@@ -142,7 +152,7 @@ end
 
 always_ff@(posedge clk or negedge rst_n)begin
     if(!rst_n) begin
-        rsp_cs <= IDLE;
+        rsp_cs <= RSP_IDLE;
     end else if(rsp_cs != rsp_ns) begin
         rsp_cs <= rsp_ns;
     end
@@ -156,12 +166,12 @@ always_comb begin: MSG_WR_FSM
         if(|(msg_wr_req & msg_wr_gnt))begin
             msg_wr_ns = REQ;
         end else begin
-            msg_wr_ns = IDLE
+            msg_wr_ns = IDLE;
         end
     end
 
     REQ: begin
-        if(msg_req_hsked) begin
+        if(msg_req_wr && msg_gnt_wr) begin
             msg_wr_ns = WAIT_RSP;
         end else begin
             msg_wr_ns = REQ;
@@ -196,12 +206,12 @@ always_comb begin: MSG_RD_CS
         if(|(msg_rd_req & msg_rd_gnt))begin
             msg_rd_ns = REQ;
         end else begin
-            msg_rd_ns = IDLE
+            msg_rd_ns = IDLE;
         end
     end
 
     REQ: begin
-        if(msg_req_hsked) begin
+        if(msg_req_rd && msg_gnt_rd) begin
             msg_rd_ns = WAIT_RSP;
         end else begin
             msg_rd_ns = REQ;
@@ -297,11 +307,11 @@ always_comb begin: RSP_FSM
     end
 
     RSP_DONE: begin
-        rsp_ns = IDLE;
+        rsp_ns = RSP_IDLE;
     end
     
     default: begin
-        rsp_ns = IDLE;
+        rsp_ns = RSP_IDLE;
     end
 
 
@@ -321,6 +331,15 @@ assign msg_wr_req = {msg_wr_req_1, msg_wr_req_0};
 
 assign {msg_gnt_1, msg_gnt_0} = msg_wr_gnt | msg_rd_gnt;
 
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        acc_status_ff <= 3'b000;
+    end else if(rsp_cs == RSP_REQ && acc_hsked) begin
+        acc_status_ff <= acc_status;
+    end else if(rsp_cs == RSP_DONE) begin
+        acc_status_ff <= 3'b000;
+    end
+end
 
 cache_rr_arb #(
         .WIDTH       (2       ),
@@ -383,7 +402,7 @@ generate
                 end else begin
                     rsp_bitmap_wr[i] <= 1'b0;
                 end
-            end else if(msg_wr_proc && rsp_valid && (msg_local.msg == 4'b010 || msg_local.msg == 4'b011) &&
+            end else if(msg_wr_proc && msg_in_valid && (msg_local.msg == 4'b010 || msg_local.msg == 4'b011) &&
                                                     msg_local.ra == cache_id && msg_local.ta == i) begin
                 rsp_bitmap_wr[i] <= 1'b1;
             end else if(!msg_wr_proc) begin
@@ -403,7 +422,7 @@ generate
                 end else begin
                     rsp_bitmap_rd[i] <= 1'b0;
                 end
-            end else if(msg_rd_proc && rsp_valid && (msg_local.msg == 4'b000) &&
+            end else if(msg_rd_proc && msg_in_valid && (msg_local.msg == 4'b000) &&
                                                     msg_local.ra == cache_id && msg_local.ta == i) begin
                 rsp_bitmap_rd[i] <= 1'b1;
             end else if(!msg_rd_proc) begin
@@ -422,7 +441,7 @@ endgenerate
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         share_ack_prenest <= 1'b0;
-    end else if(msg_rd_proc && rsp_valid && ( msg_local.msg == 4'b011) &&
+    end else if(msg_rd_proc && msg_in_valid && ( msg_local.msg == 4'b011) &&
                                             msg_local.ra == cache_id ) begin
         share_ack_prenest <= 1'b1;
     end else if(!msg_rd_proc) begin
@@ -430,15 +449,15 @@ always_ff@(posedge clk or negedge rst_n) begin
     end
 end
 
-assign msg_valid_0 = (wr_cs == DONE && rsp_owner_wr == 2'b00) || (rd_cs == DONE && rsp_owner_wr == 2'b00);
-assign msg_valid_1 = (wr_cs == DONE && rsp_owner_wr == 2'b01) || (rd_cs == DONE && rsp_owner_wr == 2'b01);
+assign msg_valid_0 = (msg_wr_cs == DONE && rsp_owner_wr == 2'b00) || (msg_rd_cs == DONE && rsp_owner_wr == 2'b00);
+assign msg_valid_1 = (msg_wr_cs == DONE && rsp_owner_wr == 2'b01) || (msg_rd_cs == DONE && rsp_owner_wr == 2'b01);
 
 always_comb begin
-    if(wr_cs == DONE && rsp_owner_wr == 2'b00) begin
+    if(msg_wr_cs == DONE && rsp_owner_wr == 2'b00) begin
         msg_rsp_0 = 3'b000;
-    end else if(rd_cs == DONE && rsp_owner_rd == 2'b00 && !share_ack_prenest) begin
+    end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b00 && !share_ack_prenest) begin
         msg_rsp_0 = 3'b010;
-    end else if(rd_cs == DONE && rsp_owner_rd == 2'b00 && share_ack_prenest) begin
+    end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b00 && share_ack_prenest) begin
         msg_rsp_0 = 3'b011;
     end else begin
         msg_rsp_0 = 3'b000;
@@ -446,11 +465,11 @@ always_comb begin
 end
 
 always_comb begin
-    if(wr_cs == DONE && rsp_owner_rd == 2'b01) begin
+    if(msg_wr_cs == DONE && rsp_owner_rd == 2'b01) begin
         msg_rsp_1 = 3'b000;
-    end else if(rd_cs == DONE && rsp_owner_rd == 2'b01 && !share_ack_prenest) begin
+    end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b01 && !share_ack_prenest) begin
         msg_rsp_1 = 3'b010;
-    end else if(rd_cs == DONE && rsp_owner_rd == 2'b01 && share_ack_prenest) begin
+    end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b01 && share_ack_prenest) begin
         msg_rsp_1 = 3'b011;
     end else begin
         msg_rsp_1 = 3'b000;
@@ -470,16 +489,22 @@ always_comb begin
     msg_rd.ra = {$clog2(cache_num){1'b1}};
 end
 
-//FIXME:
 always_comb begin
-    msg_rd.msg = u;
-    msg_rd.ta = cache_id;
-    msg_rd.ra = {$clog2(cache_num){1'b1}};
+    if(msg_proc.msg == 3'b101 && acc_status_ff != 3'b000) begin
+        msg_send.msg = 3'b011;
+    end else if(msg_proc.msg == 3'b101 && acc_status_ff == 3'b000) begin 
+        msg_send.msg = 3'b010;
+    end else begin
+        msg_send.msg = 3'b000;
+    end 
+    msg_send.ta = cache_id;
+    msg_send.ra = msg_proc.ta;
 end
 
 
 assign msg_req_wr = msg_wr_cs == REQ;
 assign msg_req_rd = msg_rd_cs == REQ;
+assign msg_send_req = rsp_cs == RSP_MSG_REQ;
 
 assign msg_send_hsked = msg_send_req && msg_send_gnt;
 
@@ -512,5 +537,27 @@ cache_rr_arb #(
         .req         (msg_req_local      ) ,//input   [WIDTH - 1 : 0]
         .req_end     (msg_gnt_local      ) ,//input   [WIDTH - 1 : 0]
         .gnt         (msg_gnt_local      ));//output  [WIDTH - 1 : 0]
+
+assign req_fifo_write = msg_in_valid && msg_local.ra == cache_id && msg_local.msg[2] == 1'b1;
+assign req_fifo_read = rsp_cs == RSP_DONE;
+assign msg_proc = req_fifo_read_data;
+
+
+cache_sync_fifo #(
+        .DATA_WIDTH  (4 + 2 * $clog2(cache_num)),
+        .FIFO_DEPTH  (cache_num               ))
+                req_fifo (
+        .clk         (clk                  ) ,//input   
+        .rst_n       (rst_n                ) ,//input   
+        .soft_rst    (1'b0                 ) ,//input   
+        .write_data  (msg_in               ) ,//input   [DATA_WIDTH - 1 : 0]
+        .write       (req_fifo_write       ) ,//input   
+        .read        (req_fifo_read        ) ,//input   
+        .read_data   (req_fifo_read_data   ) ,//output  [DATA_WIDTH - 1 : 0]
+        .full        (req_fifo_full        ) ,//output  
+        .empty       (req_fifo_empty       ) ,//output  
+        .data_num    (req_fifo_data_num    ));//output  [$clog2(FIFO_DEPTH):0]
+
+
 
 endmodule

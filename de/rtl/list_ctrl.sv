@@ -43,6 +43,7 @@ logic acc_hit_0, acc_hit_1, acc_hit_2;
 logic proc_hit_0, proc_hit_1;
 logic [$clog2(lists_depth) - 1 : 0] hit_tag_0;
 logic [$clog2(lists_depth) - 1 : 0] hit_tag_1;
+logic [$clog2(lists_depth) - 1 : 0] hit_tag_2;
 logic [$clog2(lists_depth) - 1 : 0] proc_tag_0;
 logic [$clog2(lists_depth) - 1 : 0] proc_tag_1;
 logic allocate_0, allocate_1;
