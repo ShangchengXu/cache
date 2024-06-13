@@ -322,7 +322,7 @@ assign fetch_mem_ren = (wr_cs == WR_DATA && !wr_last) && (!wr_valid || wr_data_h
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         wr_last <= 1'b0;
-    end else if((wr_cs == WR_DATA) && (wr_cnt == list_width - 1)) begin
+    end else if((wr_cs == WR_DATA) && (wr_cnt == list_width - 1) && mem_rhsked) begin
         wr_last <= 1'b1;
     end else if(wr_data_hsked) begin
         wr_last <= 1'b0;

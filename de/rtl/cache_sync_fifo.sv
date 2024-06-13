@@ -21,7 +21,7 @@ module cache_sync_fifo
 //=======================================================================
 // variables declaration
 //=======================================================================
-localparam ADDR_WIDTH = $clog2(FIFO_DEPTH);
+localparam ADDR_WIDTH = $clog2(FIFO_DEPTH) == 0 ? 1 : $clog2(FIFO_DEPTH);
 
 logic [ADDR_WIDTH : 0] wptr,rptr;
 

@@ -30,8 +30,8 @@ rd_ctrl #(
         .acc_index        (ifo.acc_index      ) ,//output  [addr_width - 1 :0]
         .acc_status       (ifo.acc_status     ) ,//input   [2:0]
         .acc_cmd          (ifo.acc_cmd        ) ,//output  [1:0]
-        .acc_tag          (ifo.acc_tag        ) ,//output  [$clog2(lists_depth) - 1 : 0]
-        .return_tag       (ifo.return_tag     ) ,//input   [$clog2(lists_depth) - 1 : 0]
+        .acc_tag          (ifo.acc_tag        ) ,//output  [$clog2(list_depth) - 1 : 0]
+        .return_tag       (ifo.return_tag     ) ,//input   [$clog2(list_depth) - 1 : 0]
         .acc_req          (ifo.acc_req        ) ,//output  
         .proc_status_r    (ifo.proc_status_r  ) ,//output  [2:0]
         .proc_addr_r      (ifo.proc_addr_r    ) ,//output  [addr_width - 1 : 0]
@@ -43,7 +43,7 @@ rd_ctrl #(
         .fetch_addr       (ifo.fetch_addr     ) ,//output  [addr_width - 1 : 0]
         .fetch_gnt        (ifo.fetch_gnt      ) ,//input   
         .fetch_done       (ifo.fetch_done     ) ,//input   
-        .mem_raddr        (ifo.mem_raddr      ) ,//output  [$clog2(lists_depth) + $clog2(list_width) - 1 : 0]
+        .mem_raddr        (ifo.mem_raddr      ) ,//output  [$clog2(list_depth) + $clog2(list_width) - 1 : 0]
         .mem_ren          (ifo.mem_ren        ) ,//output  
         .mem_rready       (ifo.mem_rready     ) ,//input   
         .mem_rdata        (ifo.mem_rdata      ) ,//input   [data_width - 1 : 0]

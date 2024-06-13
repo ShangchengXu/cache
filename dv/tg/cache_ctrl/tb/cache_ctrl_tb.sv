@@ -1,15 +1,13 @@
 `include "uvm_macros.svh"
 module cache_ctrl_tb;
-parameter lists_depth = 4;
 parameter mem_depth = 32;
 parameter data_width = 32;
 parameter addr_width = 32;
-parameter list_depth = 4;
+parameter list_depth = 32;
 parameter list_width = 32;
 parameter cache_num = 2;
 parameter cache_id = 0;
 cache_ctrl_interface_port #(
-        .lists_depth  (lists_depth  ),
         .mem_depth    (mem_depth    ),
         .data_width   (data_width   ),
         .cache_id     (cache_id     ),
@@ -23,7 +21,6 @@ logic clk;
 logic rst_n;
 logic rst_p;
 cache_ctrl #(
-        .lists_depth  (lists_depth  ),
         .mem_depth    (mem_depth    ),
         .cache_id     (cache_id     ),
         .cache_num    (cache_num    ),
@@ -43,6 +40,8 @@ cache_ctrl #(
         .acc_wr_ready       (ifo.acc_wr_ready     ) ,//output  
         .acc_wr_addr        (ifo.acc_wr_addr      ) ,//input   [addr_width - 1 : 0]
         .acc_wr_data        (ifo.acc_wr_data      ) ,//input   [data_width - 1 : 0]
+        .acc_wr_done        (ifo.acc_wr_done      ) ,
+        .acc_rd_done        (ifo.acc_rd_done      ) ,
         .wr_req             (ifo.wr_req           ) ,//output  
         .wr_gnt             (ifo.wr_gnt           ) ,//input   
         .wr_len             (ifo.wr_len           ) ,//output  [15:0]

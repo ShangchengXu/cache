@@ -1,11 +1,11 @@
 module cache_ctrl #(
-       parameter lists_depth = 4,
        parameter mem_depth = 32,
        parameter data_width = 32,
        parameter cache_num = 2,
        parameter cache_id = 0,
        parameter addr_width = 32,
        parameter list_depth = 4,
+       parameter id_width = $clog2(cache_num) == 0 ? 1 : $clog2(cache_num),
        parameter list_width = 32)
           (
     input  logic                      clk,
@@ -15,10 +15,12 @@ module cache_ctrl #(
     input  logic [addr_width - 1 : 0] acc_rd_addr,
     output logic [data_width - 1 : 0] acc_rd_data,
     output logic                      acc_rd_data_valid,
+    output logic                      acc_rd_done,
     input  logic                      acc_wr_valid,
     output logic                      acc_wr_ready,
     input  logic [addr_width - 1 : 0] acc_wr_addr,
     input  logic [data_width - 1 : 0] acc_wr_data,
+    output logic                      acc_wr_done,
     output logic                      wr_req,
     input  logic                      wr_gnt,
     output logic [15:0]               wr_len,
@@ -37,9 +39,9 @@ module cache_ctrl #(
     input  logic                      rd_valid,
     output   logic                                     msg_req,
     input    logic                                     msg_gnt,
-    output   logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg,
+    output   logic [4 + 2 * id_width - 1 : 0] msg,
     input    logic                                     msg_in_valid,
-    input    logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg_in,
+    input    logic [4 + 2 * id_width - 1 : 0] msg_in,
     output logic                      rd_ready);
 
 
@@ -135,7 +137,7 @@ logic  [1:0]                                            mem_rpri              ;
 logic  [1:0]                                            mem_wpri              ;
 
 list_ctrl #(
-        .lists_depth     (lists_depth     ),
+        .list_depth     (list_depth     ),
         .index_lenth     (addr_width      ))
           list_ctrl_inst (
         .clk             (clk             ) ,//input   
@@ -143,24 +145,24 @@ list_ctrl #(
         .acc_index_2     (acc_index_2     ) ,//input   [index_lenth - 1 :0]
         .acc_status_2    (acc_status_2    ) ,//output  [2:0]
         .acc_cmd_2       (acc_cmd_2       ) ,//input   [2:0]
-        .acc_tag_2       (acc_tag_2       ) ,//input   [$clog2(lists_depth) - 1 : 0]
-        .return_tag_2    (return_tag_2    ) ,//output  [$clog2(lists_depth) - 1 : 0]
+        .acc_tag_2       (acc_tag_2       ) ,//input   [$clog2(list_depth) - 1 : 0]
+        .return_tag_2    (return_tag_2    ) ,//output  [$clog2(list_depth) - 1 : 0]
         .return_index_2  (return_index_2  ) ,//output  [index_lenth         - 1 : 0]
         .acc_req_2       (acc_req_2       ) ,//input   
         .acc_gnt_2       (acc_gnt_2       ) ,//output
         .acc_index_0     (acc_index_0     ) ,//input   [index_lenth - 1 :0]
         .acc_status_0    (acc_status_0    ) ,//output  [2:0]
         .acc_cmd_0       (acc_cmd_0       ) ,//input   [2:0]
-        .acc_tag_0       (acc_tag_0       ) ,//input   [$clog2(lists_depth) - 1 : 0]
-        .return_tag_0    (return_tag_0    ) ,//output  [$clog2(lists_depth) - 1 : 0]
+        .acc_tag_0       (acc_tag_0       ) ,//input   [$clog2(list_depth) - 1 : 0]
+        .return_tag_0    (return_tag_0    ) ,//output  [$clog2(list_depth) - 1 : 0]
         .return_index_0  (return_index_0  ) ,//output  [index_lenth         - 1 : 0]
         .acc_req_0       (acc_req_0       ) ,//input   
         .acc_gnt_0       (acc_gnt_0       ) ,//output
         .acc_index_1     (acc_index_1     ) ,//input   [index_lenth - 1 :0]
         .acc_status_1    (acc_status_1    ) ,//output  [2:0]
         .acc_cmd_1       (acc_cmd_1       ) ,//input   [2:0]
-        .acc_tag_1       (acc_tag_1       ) ,//input   [$clog2(lists_depth) - 1 : 0]
-        .return_tag_1    (return_tag_1    ) ,//output  [$clog2(lists_depth) - 1 : 0]
+        .acc_tag_1       (acc_tag_1       ) ,//input   [$clog2(list_depth) - 1 : 0]
+        .return_tag_1    (return_tag_1    ) ,//output  [$clog2(list_depth) - 1 : 0]
         .return_index_1  (return_index_1  ) ,//output  [index_lenth         - 1 : 0]
         .acc_gnt_1       (acc_gnt_1       ) ,//output
         .acc_req_1       (acc_req_1       ));//input   
@@ -204,6 +206,7 @@ rd_ctrl #(
         .acc_rd_ready       (acc_rd_ready       ) ,//output  
         .acc_rd_addr        (acc_rd_addr        ) ,//input   [addr_width - 1 : 0]
         .acc_rd_data        (acc_rd_data        ) ,//output  [data_width - 1 : 0]
+        .acc_rd_done        (acc_rd_done        ) ,
         .mem_rpri           (mem_rpri           ) ,
         .acc_rd_data_valid  (acc_rd_data_valid  ) ,//output  
         .acc_index          (acc_index_1        ) ,//output  [addr_width - 1 :0]
@@ -257,6 +260,7 @@ wr_ctrl #(
         .acc_cmd         (acc_cmd_0         ) ,//output  [2:0]
         .acc_tag         (acc_tag_0         ) ,//output  [$clog2(list_depth) - 1 : 0]
         .return_tag      (return_tag_0      ) ,//input   [$clog2(list_depth) - 1 : 0]
+        .acc_wr_done     (acc_wr_done       ) ,
         .return_index    (return_index_0    ) ,//input   [addr_width - 1 :0]
         .acc_req         (acc_req_0         ) ,//output  
         .acc_gnt         (acc_gnt_0         ) ,//input
@@ -373,9 +377,9 @@ msg_ctrl #(
         .msg_gnt_1     (msg_gnt_1     ) ,//output  
         .msg_req       (msg_req       ) ,//output  
         .msg_gnt       (msg_gnt       ) ,//input   
-        .msg           (msg           ) ,//output  [4 + 2 * $clog2(cache_num) - 1 : 0]
+        .msg           (msg           ) ,//output  [4 + 2 * id_width - 1 : 0]
         .msg_in_valid  (msg_in_valid  ) ,//input   
-        .msg_in        (msg_in        ));//input   [4 + 2 * $clog2(cache_num) - 1 : 0]
+        .msg_in        (msg_in        ));//input   [4 + 2 * id_width - 1 : 0]
 
 
 

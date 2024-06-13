@@ -27,26 +27,17 @@ task cache_ctrl_scoreboard::main_phase(uvm_phase phase);
    super.main_phase(phase);
    fork 
       while (1) begin
+         act_port.get(get_actual);
          exp_port.get(get_expect);
          $cast(expect_tr,get_expect);
-         expect_queue.push_back(expect_tr);
-      end
-      while (1) begin
-         act_port.get(get_actual);
          $cast(actual_tr, get_actual);
-         if(expect_queue.size() > 0) begin
-            tmp_tran = expect_queue.pop_front();
-            result = actual_tr.compare(tmp_tran);
+            result = actual_tr.compare(expect_tr);
             if(result) begin 
                // `uvm_info("cache_ctrl_scoreboard", "Compare SUCCESSFULLY", UVM_LOW);
             end
             else begin
                `uvm_error("cache_ctrl_scoreboard", "Compare FAILED");
             end
-         end
-         else begin
-            `uvm_error("cache_ctrl_scoreboard", "Received from DUT, while Expect Queue is empty");
-         end 
       end
    join
 endtask

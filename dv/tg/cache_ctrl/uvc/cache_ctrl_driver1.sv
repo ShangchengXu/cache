@@ -44,16 +44,23 @@ task cache_ctrl_driver1::main_phase(uvm_phase phase);
       if(vif.wr_req &&  vif.wr_gnt) begin
          temp_addr = (vif.wr_addr)/4;
          index = 0;
-         for(int i = 0 ; i < 50; i++) begin
-            if(vif.wr_valid) begin
-               memory::mem[temp_addr + index] = vif.wr_data;
-               index = index + 1;
-            end
-            if(i == 49) begin
-               vif.wr_done <= 1'b1;
-            end
-            @(posedge vif.clk);
+            while(1) begin
+               if(vif.wr_valid) begin
+                  memory::mem[temp_addr + index] = vif.wr_data;
+                  index = index + 1;
+                  @(posedge vif.clk);
+                  if(index == 32) begin
+                     break;
+                  end
+               end else begin
+               @(posedge vif.clk);
+               end
          end
+            repeat(3) begin
+            @(posedge vif.clk);
+            end
+            vif.wr_done <= 1'b1;
+            @(posedge vif.clk);
          vif.wr_done <= 1'b0;
       end
 

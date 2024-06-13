@@ -4,6 +4,7 @@ module msg_ctrl #(
                 parameter addr_width = 32,
                 parameter list_depth = 4,
                 parameter data_width = 32,
+                parameter id_width = $clog2(cache_num) == 0 ? 1 : $clog2(cache_num),
                 parameter list_width = 32
                 )
                 (
@@ -46,11 +47,10 @@ module msg_ctrl #(
     
                     output   logic                                     msg_req,
                     input    logic                                     msg_gnt,
-                    output   logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg,
+                    output   logic [4 + 2 * id_width - 1 : 0] msg,
                     input    logic                                     msg_in_valid,
-                    input    logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg_in
+                    input    logic [4 + 2 * id_width - 1 : 0] msg_in
                 );
-
 // msg
 // 4'b010 : rd_normal_ack
 // 4'b011 : rd_share_ack
@@ -59,8 +59,8 @@ module msg_ctrl #(
 // 4'b101 : rd_req
 typedef struct packed {
     logic [3:0] msg;
-    logic [$clog2(cache_num) - 1 : 0] ta;
-    logic [$clog2(cache_num) - 1 : 0] ra;
+    logic [id_width - 1 : 0] ta;
+    logic [id_width - 1 : 0] ra;
 } msg_t;
 
 logic acc_hsked;
@@ -69,13 +69,15 @@ logic msg_send_hsked;
 logic msg_send_req;
 logic msg_send_gnt;
 msg_t msg_send;
+logic [$clog2(list_depth) - 1 : 0]        return_tag_ff;
+logic [addr_width - 1 :0]                 return_index_ff;
 
 logic [2:0] acc_status_ff;
 
 logic req_fifo_empty;
 logic req_fifo_full;
-logic [4 + 2 * $clog2(cache_num) - 1 : 0] req_fifo_read_data;
-logic [$clog2(cache_num) : 0] req_fifo_data_num;
+logic [4 + 2 * id_width - 1 : 0] req_fifo_read_data;
+logic [id_width : 0] req_fifo_data_num;
 logic req_fifo_write;
 logic req_fifo_read;
 msg_t msg_proc;
@@ -290,14 +292,6 @@ always_comb begin: RSP_FSM
         end
     end
 
-    RSP_UPDATE: begin
-        if(acc_hsked) begin
-            rsp_ns = RSP_MSG_REQ;
-        end else begin
-            rsp_ns = RSP_UPDATE;
-        end
-    end
-
     RSP_MSG_REQ: begin
         if(msg_send_hsked) begin
             rsp_ns = RSP_DONE;
@@ -325,17 +319,100 @@ assign msg_rd_req_1 = msg_req_1 && (msg_1 == 3'b101) && (msg_rd_cs == IDLE);
 assign msg_wr_req_0 = msg_req_0 && (msg_0 == 3'b100) && (msg_wr_cs == IDLE);
 assign msg_wr_req_1 = msg_req_1 && (msg_1 == 3'b100) && (msg_wr_cs == IDLE);
 
-assign msg_rd_req = {msg_rd_req_1, msg_rd_req_0};
 
-assign msg_wr_req = {msg_wr_req_1, msg_wr_req_0};
+generate 
+if(cache_num == 1) begin: SINGLE_CACHE
 
-assign {msg_gnt_1, msg_gnt_0} = msg_wr_gnt | msg_rd_gnt;
+    assign {msg_gnt_1, msg_gnt_0} = 2'b11;
+
+    assign msg_rd_req = 2'b00;
+    
+    assign msg_wr_req = 2'b00;
+
+    always_ff@(posedge clk or negedge rst_n) begin
+        if(!rst_n) begin
+            msg_valid_0 <= 1'b0;
+            msg_rsp_0   <= 4'b0;
+        end else if(msg_req_0 && msg_gnt_0 && msg_0 == 4'b100) begin
+            msg_valid_0 <= 1'b1;
+            msg_rsp_0   <= 4'b0;
+        end else if(msg_req_0 && msg_gnt_0 && msg_0 == 4'b101) begin
+            msg_valid_0 <= 1'b1;
+            msg_rsp_0   <= 4'b010;
+        end else begin
+            msg_valid_0 <= 1'b0;
+            msg_rsp_0   <= 4'b0;
+        end
+    end
+
+    always_ff@(posedge clk or negedge rst_n) begin
+        if(!rst_n) begin
+            msg_valid_1 <= 1'b0;
+            msg_rsp_1   <= 4'b0;
+        end else if(msg_req_1 && msg_gnt_1 && msg_1 == 4'b100) begin
+            msg_valid_1 <= 1'b1;
+            msg_rsp_1   <= 4'b0;
+        end else if(msg_req_1 && msg_gnt_1 && msg_1 == 4'b101) begin
+            msg_valid_1 <= 1'b1;
+            msg_rsp_1   <= 4'b010;
+        end else begin
+            msg_valid_1 <= 1'b0;
+            msg_rsp_1   <= 4'b0;
+        end
+    end
+
+
+end else begin: CACHE_GRP
+
+    assign {msg_gnt_1, msg_gnt_0} = msg_wr_gnt | msg_rd_gnt;
+
+    assign msg_rd_req = {msg_rd_req_1, msg_rd_req_0};
+    
+    assign msg_wr_req = {msg_wr_req_1, msg_wr_req_0};
+    
+
+    assign msg_valid_0 = (msg_wr_cs == DONE && rsp_owner_wr == 2'b00) || (msg_rd_cs == DONE && rsp_owner_rd == 2'b00);
+
+    assign msg_valid_1 = (msg_wr_cs == DONE && rsp_owner_wr == 2'b01) || (msg_rd_cs == DONE && rsp_owner_rd == 2'b01);
+
+    always_comb begin
+        if(msg_wr_cs == DONE && rsp_owner_wr == 2'b00) begin
+            msg_rsp_0 = 3'b000;
+        end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b00 && !share_ack_prenest) begin
+            msg_rsp_0 = 3'b010;
+        end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b00 && share_ack_prenest) begin
+            msg_rsp_0 = 3'b011;
+        end else begin
+            msg_rsp_0 = 3'b000;
+        end
+    end
+
+    always_comb begin
+        if(msg_wr_cs == DONE && rsp_owner_rd == 2'b01) begin
+            msg_rsp_1 = 3'b000;
+        end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b01 && !share_ack_prenest) begin
+            msg_rsp_1 = 3'b010;
+        end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b01 && share_ack_prenest) begin
+            msg_rsp_1 = 3'b011;
+        end else begin
+            msg_rsp_1 = 3'b000;
+        end
+    end
+
+
+
+end
+endgenerate
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         acc_status_ff <= 3'b000;
+        return_index_ff <= 0;
+        return_tag_ff <= 0;
     end else if(rsp_cs == RSP_REQ && acc_hsked) begin
         acc_status_ff <= acc_status;
+        return_index_ff <= return_index;
+        return_tag_ff <= return_tag;
     end else if(rsp_cs == RSP_DONE) begin
         acc_status_ff <= 3'b000;
     end
@@ -449,44 +526,18 @@ always_ff@(posedge clk or negedge rst_n) begin
     end
 end
 
-assign msg_valid_0 = (msg_wr_cs == DONE && rsp_owner_wr == 2'b00) || (msg_rd_cs == DONE && rsp_owner_wr == 2'b00);
-assign msg_valid_1 = (msg_wr_cs == DONE && rsp_owner_wr == 2'b01) || (msg_rd_cs == DONE && rsp_owner_wr == 2'b01);
-
-always_comb begin
-    if(msg_wr_cs == DONE && rsp_owner_wr == 2'b00) begin
-        msg_rsp_0 = 3'b000;
-    end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b00 && !share_ack_prenest) begin
-        msg_rsp_0 = 3'b010;
-    end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b00 && share_ack_prenest) begin
-        msg_rsp_0 = 3'b011;
-    end else begin
-        msg_rsp_0 = 3'b000;
-    end
-end
-
-always_comb begin
-    if(msg_wr_cs == DONE && rsp_owner_rd == 2'b01) begin
-        msg_rsp_1 = 3'b000;
-    end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b01 && !share_ack_prenest) begin
-        msg_rsp_1 = 3'b010;
-    end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b01 && share_ack_prenest) begin
-        msg_rsp_1 = 3'b011;
-    end else begin
-        msg_rsp_1 = 3'b000;
-    end
-end
 
 
 always_comb begin
     msg_wr.msg = 4'b100;
     msg_wr.ta = cache_id;
-    msg_wr.ra = {$clog2(cache_num){1'b1}};
+    msg_wr.ra = {id_width{1'b1}};
 end
 
 always_comb begin
     msg_rd.msg = 4'b101;
     msg_rd.ta = cache_id;
-    msg_rd.ra = {$clog2(cache_num){1'b1}};
+    msg_rd.ra = {id_width{1'b1}};
 end
 
 always_comb begin
@@ -509,6 +560,14 @@ assign msg_send_req = rsp_cs == RSP_MSG_REQ;
 assign msg_send_hsked = msg_send_req && msg_send_gnt;
 
 assign fetch_hsked = fetch_req && fetch_gnt;
+
+assign fetch_req = rsp_cs == RSP_WB_REQ;
+
+assign fetch_cmd = 2'b00;
+
+assign fetch_addr = return_index_ff;
+
+assign fetch_tag = return_tag_ff;
 
 assign acc_hsked = acc_req && acc_gnt;
 
@@ -544,7 +603,7 @@ assign msg_proc = req_fifo_read_data;
 
 
 cache_sync_fifo #(
-        .DATA_WIDTH  (4 + 2 * $clog2(cache_num)),
+        .DATA_WIDTH  (4 + 2 * id_width),
         .FIFO_DEPTH  (cache_num               ))
                 req_fifo (
         .clk         (clk                  ) ,//input   
@@ -559,5 +618,23 @@ cache_sync_fifo #(
         .data_num    (req_fifo_data_num    ));//output  [$clog2(FIFO_DEPTH):0]
 
 
+assign acc_req = rsp_cs == RSP_REQ || rsp_cs == RSP_UPDATE;
+
+always_comb begin
+    acc_cmd = 3'b00;
+    if(rsp_cs == RSP_REQ) begin
+        acc_cmd = 3'b00;
+    end else if(rsp_cs == RSP_UPDATE) begin
+        if(msg_proc.msg == 4'b100) begin
+            acc_cmd = 3'b11;
+        end else begin
+            acc_cmd = 3'b01;
+        end
+    end
+end
+
+assign acc_tag = rsp_cs == RSP_REQ ? 0 : return_tag_ff;
+
+assign acc_index = 0;
 
 endmodule

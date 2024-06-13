@@ -12,6 +12,7 @@ module rd_ctrl #(
                     output   logic                               acc_rd_ready,
                     input    logic [addr_width - 1 : 0]          acc_rd_addr,
                     output   logic [data_width - 1 : 0]          acc_rd_data,
+                    output   logic                               acc_rd_done,
                     output   logic                               acc_rd_data_valid,
 
                     output   logic [addr_width - 1 :0]           acc_index,
@@ -173,7 +174,7 @@ always_comb begin
         proc_status_r = 3'b001;
     end else if(rd_cs == WAIT_COMFLICT) begin
         proc_status_r = 3'b100;
-    end else if(cs_is_allocate_line || cs_is_fetch_req || 
+    end else if(cs_is_allocate_line || cs_is_fetch_req || (rd_cs == MSG_REQ) || (rd_cs == WAIT_MSG_RSP) ||
                 cs_is_wait_fetch_comp || cs_is_acc_mem || (cs_is_update_list && rd_req_pending) ||
                 (cs_is_update_list && !rd_req_pending && !req_hsked)) begin
         proc_status_r = 3'b010;
@@ -527,4 +528,5 @@ always_ff@(posedge clk or negedge rst_n) begin
     end
 end
 
+assign acc_rd_done = mem_rhsked;
 endmodule
