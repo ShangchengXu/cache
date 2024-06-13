@@ -44,6 +44,7 @@ module rd_ctrl #(
 
                     output   logic                               msg_req,
                     output   logic [3:0]                         msg,
+                    output   logic [addr_width - 1 :0]           msg_index,
                     input    logic [3:0]                         msg_rsp,
                     input    logic                               msg_valid,
                     input    logic                               msg_gnt,
@@ -511,6 +512,8 @@ end
 assign msg_req = rd_cs == MSG_REQ;
 
 assign msg = 3'b101;
+
+assign msg_index = acc_index;
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
