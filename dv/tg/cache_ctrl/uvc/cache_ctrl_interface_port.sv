@@ -1,9 +1,10 @@
 interface cache_ctrl_interface_port;
-parameter lists_depth = 4;
 parameter mem_depth = 32;
 parameter data_width = 32;
 parameter addr_width = 32;
-parameter list_depth = 4;
+parameter cache_num = 2;
+parameter cache_id = 0;
+parameter list_depth = 32;
 parameter list_width = 32;
 logic clk;
 logic rst_n;
@@ -23,6 +24,8 @@ logic [addr_width - 1 : 0] wr_addr;
 logic [data_width - 1 : 0] wr_data;
 logic wr_last;
 logic wr_done;
+logic acc_wr_done;
+logic acc_rd_done;
 logic wr_valid;
 logic wr_ready;
 logic rd_req;
@@ -34,6 +37,11 @@ logic rd_done;
 logic rd_valid;
 logic rd_ready;
 
+logic                                     msg_req;
+logic                                     msg_gnt;
+logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg;
+logic                                     msg_in_valid;
+logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg_in;
 
 
 

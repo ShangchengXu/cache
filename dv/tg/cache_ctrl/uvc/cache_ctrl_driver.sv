@@ -24,11 +24,14 @@ endclass
 task cache_ctrl_driver::main_phase(uvm_phase phase);
    cache_ctrl_transaction tr;
    logic [31:0] temp_addr;
+   logic [1:0] queue [$];
+   logic [1:0] temp_req;
    vif.acc_rd_valid <= 1'b0;
    vif.acc_rd_addr <= 0;
    vif.rd_gnt <= 1'b1;
-         vif.rd_valid <= 1'b0;
-         vif.rd_done <= 1'b0;
+   vif.rd_valid <= 1'b0;
+   vif.rd_done <= 1'b0;
+   vif.msg_gnt <= 1'b1;
 
    fork
    while(1) begin
@@ -47,13 +50,42 @@ task cache_ctrl_driver::main_phase(uvm_phase phase);
             if(i == 31) begin
                vif.rd_done <= 1'b1;
             end
-            @(posedge vif.clk);
+            while(1) begin
+               @(posedge vif.clk);
+               if(vif.rd_valid && vif.rd_ready) begin
+                  break;
+               end
+            end
          end
          vif.rd_valid <= 1'b0;
          vif.rd_done <= 1'b0;
       end
-
    end
+   while(1) begin
+      @(posedge vif.clk);
+      if(vif.msg_req && vif.msg_gnt) begin
+         if(vif.msg[5:2] == 4'b100)
+            #3 queue.push_front(2'b00);
+         else begin
+            #3 queue.push_front(2'b01);
+         end
+      end
+   end
+   while(1) begin
+      vif.msg_in_valid <= 1'b0;
+      vif.msg_in <= {4'b000,1'b0,1'b0};
+      if(queue.size()!=0) begin
+           temp_req =  queue.pop_back();
+           vif.msg_in_valid <= 1'b1;
+           if(temp_req == 2'b00) begin
+             vif.msg_in <= {4'b010,1'b1,1'b0};
+           end else begin
+             vif.msg_in <= {4'b000,1'b1,1'b0};
+           end
+      end
+      @(posedge vif.clk);
+   end
+
    join
 endtask
 

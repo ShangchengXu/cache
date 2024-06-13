@@ -21,7 +21,9 @@ module cache_sync_fifo
 //=======================================================================
 // variables declaration
 //=======================================================================
-logic [ADDR_WIDTH : 0] wtpr,rptr;
+localparam ADDR_WIDTH = $clog2(FIFO_DEPTH) == 0 ? 1 : $clog2(FIFO_DEPTH);
+
+logic [ADDR_WIDTH : 0] wptr,rptr;
 
 logic [DATA_WIDTH - 1 : 0] mem [FIFO_DEPTH];
 
@@ -80,12 +82,12 @@ assign full =  (rptr[ADDR_WIDTH] != wptr[ADDR_WIDTH]) && (wptr[ADDR_WIDTH - 1 : 
 assign data_num = (rptr[ADDR_WIDTH] == wptr[ADDR_WIDTH]) ? (wptr[ADDR_WIDTH - 1 : 0] - rptr[ADDR_WIDTH - 1 : 0]) :
                                                         (wptr[ADDR_WIDTH - 1 : 0] + FIFO_DEPTH - rptr[ADDR_WIDTH - 1 : 0]);
 
-`ifdef ASSERT_ON
-property full_write:
+`ifdef DEBUG
+property full_write;
         @(posedge clk) disable iff (~rst_n) (full |-> ~write);
 endproperty
 full_write0: assert property(full_write);
-property empty_read:
+property empty_read;
         @(posedge clk) disable iff (~rst_n) (empty |-> ~read);
 endproperty
 empty_read0: assert property(empty_read);

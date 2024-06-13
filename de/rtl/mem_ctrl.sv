@@ -76,7 +76,7 @@ assign wr_rd_conflict = (local_mem_wen && local_mem_ren) && (local_mem_raddr == 
 assign local_mem_waddr = fetch_whsked ? fetch_mem_waddr : mem_waddr;
 assign local_mem_raddr = fetch_rhsked ? fetch_mem_raddr : mem_raddr;
 
-assign local_mem_wdata = fetch_hsked ? fetch_mem_wdata : mem_wdata;
+assign local_mem_wdata = fetch_whsked ? fetch_mem_wdata : mem_wdata;
 
 always_ff @(posedge clk or negedge rst_n) begin
     if(!rst_n) begin

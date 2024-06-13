@@ -1,11 +1,11 @@
 module cache_ctrl #(
+       parameter list_depth = 4,
        parameter mem_depth = 32,
        parameter data_width = 32,
        parameter cache_num = 2,
        parameter cache_id = 0,
        parameter addr_width = 32,
        parameter list_depth = 4,
-       parameter id_width = $clog2(cache_num) == 0 ? 1 : $clog2(cache_num),
        parameter list_width = 32)
           (
     input  logic                      clk,
@@ -15,12 +15,10 @@ module cache_ctrl #(
     input  logic [addr_width - 1 : 0] acc_rd_addr,
     output logic [data_width - 1 : 0] acc_rd_data,
     output logic                      acc_rd_data_valid,
-    output logic                      acc_rd_done,
     input  logic                      acc_wr_valid,
     output logic                      acc_wr_ready,
     input  logic [addr_width - 1 : 0] acc_wr_addr,
     input  logic [data_width - 1 : 0] acc_wr_data,
-    output logic                      acc_wr_done,
     output logic                      wr_req,
     input  logic                      wr_gnt,
     output logic [15:0]               wr_len,
@@ -39,9 +37,9 @@ module cache_ctrl #(
     input  logic                      rd_valid,
     output   logic                                     msg_req,
     input    logic                                     msg_gnt,
-    output   logic [4 + 2 * id_width - 1 : 0] msg,
+    output   logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg,
     input    logic                                     msg_in_valid,
-    input    logic [4 + 2 * id_width - 1 : 0] msg_in,
+    input    logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg_in,
     output logic                      rd_ready);
 
 
@@ -54,6 +52,13 @@ logic [addr_width - 1 :0]                 return_index_2;
 logic                                     acc_req_2;
 logic                                     acc_gnt_2;
 
+
+logic [1:0]                               fetch_cmd_2;
+logic                                     fetch_req_2;
+logic [$clog2(list_depth) - 1 : 0]        fetch_tag_2;
+logic [addr_width - 1 : 0]                fetch_addr_2;
+logic                                     fetch_gnt_2;
+logic                                     fetch_done_2;
 
 logic                                     msg_req_0;
 logic [3:0]                               msg_0;
@@ -114,16 +119,6 @@ logic [$clog2(list_depth) - 1 : 0]                      fetch_tag_r           ;
 logic [addr_width - 1 : 0]                              fetch_addr_r          ;
 logic                                                   fetch_gnt_r           ;
 logic                                                   fetch_done_r          ;
-
-
-
-logic [1:0]                                             fetch_cmd_m           ;
-logic                                                   fetch_req_m           ;
-logic [$clog2(list_depth) - 1 : 0]                      fetch_tag_m           ;
-logic [addr_width - 1 : 0]                              fetch_addr_m          ;
-logic                                                   fetch_gnt_m           ;
-logic                                                   fetch_done_m          ;
-
 logic [$clog2(list_depth * list_width) - 1 : 0]         fetch_mem_raddr       ;
 logic                                                   fetch_mem_ren         ;
 logic                                                   fetch_mem_rready      ;
@@ -206,7 +201,6 @@ rd_ctrl #(
         .acc_rd_ready       (acc_rd_ready       ) ,//output  
         .acc_rd_addr        (acc_rd_addr        ) ,//input   [addr_width - 1 : 0]
         .acc_rd_data        (acc_rd_data        ) ,//output  [data_width - 1 : 0]
-        .acc_rd_done        (acc_rd_done        ) ,
         .mem_rpri           (mem_rpri           ) ,
         .acc_rd_data_valid  (acc_rd_data_valid  ) ,//output  
         .acc_index          (acc_index_1        ) ,//output  [addr_width - 1 :0]
@@ -260,7 +254,6 @@ wr_ctrl #(
         .acc_cmd         (acc_cmd_0         ) ,//output  [2:0]
         .acc_tag         (acc_tag_0         ) ,//output  [$clog2(list_depth) - 1 : 0]
         .return_tag      (return_tag_0      ) ,//input   [$clog2(list_depth) - 1 : 0]
-        .acc_wr_done     (acc_wr_done       ) ,
         .return_index    (return_index_0    ) ,//input   [addr_width - 1 :0]
         .acc_req         (acc_req_0         ) ,//output  
         .acc_gnt         (acc_gnt_0         ) ,//input
@@ -339,47 +332,7 @@ fetch_ctrl #(
         .rd_valid               (rd_valid               ) ,//input   
         .rd_ready               (rd_ready               ));//output  
 
-msg_ctrl #(
-        .cache_id      (cache_id      ),
-        .cache_num     (cache_num     ),
-        .addr_width    (addr_width    ),
-        .list_depth    (list_depth    ),
-        .data_width    (data_width    ),
-        .list_width    (list_width    ))
-         msg_ctrl (
-        .clk           (clk           ) ,//input   
-        .rst_n         (rst_n         ) ,//input   
-        .acc_index     (acc_index_2   ) ,//output  [addr_width - 1 :0]
-        .acc_status    (acc_status_2  ) ,//input   [2:0]
-        .acc_cmd       (acc_cmd_2     ) ,//output  [2:0]
-        .acc_tag       (acc_tag_2     ) ,//output  [$clog2(list_depth) - 1 : 0]
-        .return_tag    (return_tag_2  ) ,//input   [$clog2(list_depth) - 1 : 0]
-        .return_index  (return_index_2) ,//input   [addr_width - 1 :0]
-        .acc_req       (acc_req_2     ) ,//output  
-        .acc_gnt       (acc_gnt_2     ) ,//input   
-        .fetch_cmd     (fetch_cmd_m   ) ,//output  [1:0]
-        .fetch_req     (fetch_req_m   ) ,//output  
-        .fetch_tag     (fetch_tag_m   ) ,//output  [$clog2(list_depth) - 1 : 0]
-        .fetch_addr    (fetch_addr_m  ) ,//output  [addr_width - 1 : 0]
-        .fetch_gnt     (fetch_gnt_m   ) ,//input   
-        .fetch_done    (fetch_done_m  ) ,//input   
-        .msg_req_0     (msg_req_0     ) ,//input   
-        .msg_0         (msg_0         ) ,//input   [3:0]
-        .msg_index_0   (msg_index_0   ) ,//input   [addr_width - 1 :0]
-        .msg_rsp_0     (msg_rsp_0     ) ,//output  [3:0]
-        .msg_valid_0   (msg_valid_0   ) ,//output  
-        .msg_gnt_0     (msg_gnt_0     ) ,//output  
-        .msg_req_1     (msg_req_1     ) ,//input   
-        .msg_1         (msg_1         ) ,//input   [3:0]
-        .msg_index_1   (msg_index_1   ) ,//input   [addr_width - 1 :0]
-        .msg_rsp_1     (msg_rsp_1     ) ,//output  [3:0]
-        .msg_valid_1   (msg_valid_1   ) ,//output  
-        .msg_gnt_1     (msg_gnt_1     ) ,//output  
-        .msg_req       (msg_req       ) ,//output  
-        .msg_gnt       (msg_gnt       ) ,//input   
-        .msg           (msg           ) ,//output  [4 + 2 * id_width - 1 : 0]
-        .msg_in_valid  (msg_in_valid  ) ,//input   
-        .msg_in        (msg_in        ));//input   [4 + 2 * id_width - 1 : 0]
+msg_ctrl msg_ctrl(/*inst*/)
 
 
 

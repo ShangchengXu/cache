@@ -12,6 +12,7 @@ module wr_ctrl #(
                     output   logic                               acc_wr_ready,
                     input    logic [addr_width - 1 : 0]          acc_wr_addr,
                     input    logic [data_width - 1 : 0]          acc_wr_data,
+                    output   logic                               acc_wr_done,
 
                     output   logic [addr_width - 1 :0]           acc_index,
                     input    logic [2:0]                         acc_status,
@@ -159,7 +160,7 @@ always_comb begin
         proc_status_w = 3'b001;
     end else if(wr_cs == WAIT_COMFLICT) begin
         proc_status_w = 3'b100;
-    end else if(cs_is_allocate_line || cs_is_fetch_req || 
+    end else if(cs_is_allocate_line || cs_is_fetch_req || (wr_cs == MSG_REQ) || (wr_cs == WAIT_MSG_RSP) ||
                 cs_is_wait_fetch_comp || cs_is_acc_mem || (cs_is_update_list && rd_req_pending) ||
                 (cs_is_update_list && !rd_req_pending && !req_hsked)) begin
         proc_status_w = 3'b010;
@@ -521,5 +522,7 @@ assign msg_req = wr_cs == MSG_REQ;
 assign msg = 3'b100;
 
 assign msg_index = acc_index;
+
+assign acc_wr_done = mem_whsked;
 
 endmodule

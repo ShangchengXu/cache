@@ -29,21 +29,32 @@ endclass
 task cache_ctrl_monitor::main_phase(uvm_phase phase);
    cache_ctrl_transaction tr;
    cache_ctrl_transaction tr1;
+   logic [31:0] rd_addr_queue [$];
+   logic [31:0] rd_data_queue [$];
+   logic [31:0] wr_addr_queue [$];
+   logic [31:0] wr_data_queue [$];
    //------------forever------//
    while(1) begin
       if(is_active == UVM_ACTIVE) begin
          @(posedge vif.clk) ;
          if(vif.acc_wr_valid && vif.acc_wr_ready) begin
+            wr_addr_queue.push_front(vif.acc_wr_addr);
+            wr_data_queue.push_front(vif.acc_wr_data);
+         end
+         if(vif.acc_wr_done) begin
             tr1 = new("tr1");
             tr1.req = 1'b0;
-            tr1.addr = vif.acc_wr_addr;
-            tr1.wr_data = vif.acc_wr_data;
+            tr1.addr = wr_addr_queue.pop_back();
+            tr1.wr_data = wr_data_queue.pop_back();
             ap.write(tr1);
          end
          if(vif.acc_rd_valid && vif.acc_rd_ready) begin
+            rd_addr_queue.push_front(vif.acc_rd_addr);
+         end
+         if(vif.acc_rd_done) begin
             tr = new("tr");
             tr.req = 1'b1;
-            tr.addr = vif.acc_rd_addr;
+            tr.addr = rd_addr_queue.pop_back();
             ap.write(tr);
          end
       end

@@ -6,7 +6,7 @@ DEL_PASS=False
 TC=base_build_${name}_case0
 UVM_VERBOSITY=UVM_MEDIUM
 clean:
-	cd ../build && rm -rf  ./verdiLog  ./dff ./csrc *.daidir *log *.vpd *.vdb simv* *.key *race.out* *.rc *.fsdb *.vpd *.log *.conf *.dat *.conf
+	cd ../build/base_build && rm -rf  ./verdiLog  ./dff ./csrc *.daidir *log *.vpd *.vdb simv* *.key *race.out* *.rc *.fsdb *.vpd *.log *.conf *.dat *.conf
 
 comp:
 	python ${PYTOOLS_HOME}/main.py -c comp -n ${name}
