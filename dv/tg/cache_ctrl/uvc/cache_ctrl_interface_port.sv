@@ -39,9 +39,9 @@ logic rd_ready;
 
 logic                                     msg_req;
 logic                                     msg_gnt;
-logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg;
+logic [4 + 2 * $clog2(cache_num) + addr_width - 1 : 0] msg;
 logic                                     msg_in_valid;
-logic [4 + 2 * $clog2(cache_num) - 1 : 0] msg_in;
+logic [4 + 2 * $clog2(cache_num) + addr_width - 1 : 0] msg_in;
 
 
 

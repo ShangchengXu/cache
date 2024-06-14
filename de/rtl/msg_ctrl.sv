@@ -80,7 +80,7 @@ logic [2:0] acc_status_ff;
 
 logic req_fifo_empty;
 logic req_fifo_full;
-logic [4 + 2 * id_width - 1 : 0] req_fifo_read_data;
+logic [4 + 2 * id_width + addr_width - 1 : 0] req_fifo_read_data;
 logic [id_width : 0] req_fifo_data_num;
 logic req_fifo_write;
 logic req_fifo_read;
@@ -616,7 +616,7 @@ assign msg_proc = req_fifo_read_data;
 
 
 cache_sync_fifo #(
-        .DATA_WIDTH  (4 + 2 * id_width),
+        .DATA_WIDTH  (4 + 2 * id_width + addr_width),
         .FIFO_DEPTH  (cache_num               ))
                 req_fifo (
         .clk         (clk                  ) ,//input   

@@ -239,7 +239,7 @@ assign tag1_is_tail = proc_tag_1 == lru_list.tail && !lru_list.empty;
 assign tag0_tag1 = (tag_table[proc_tag_0].nxt_tag == proc_tag_1) && (tag_table[proc_tag_1].pre_tag == proc_tag_0) && !tag1_is_head && !tag0_is_tail;
 assign tag1_tag0 = (tag_table[proc_tag_1].nxt_tag == proc_tag_0) && (tag_table[proc_tag_0].pre_tag == proc_tag_1) && !tag0_is_head && !tag1_is_tail;
 
-assign hit_comflict = hit_tag_0 == hit_tag_1;
+assign hit_comflict = proc_tag_0 == proc_tag_1;
 
 always_comb begin
     return_tag_0 = 0;

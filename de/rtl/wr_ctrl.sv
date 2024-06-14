@@ -332,8 +332,10 @@ always_comb begin:WR_FSM
         end
 
         ALLOCATE_LINE: begin
-            if(req_hsked) begin
+            if(req_hsked && acc_status != 3'b010) begin
                 wr_ns = MSG_REQ;
+            end else if(req_hsked) begin
+                wr_ns = WR_REQ;
             end else begin
                 wr_ns = ALLOCATE_LINE;
             end
@@ -349,9 +351,7 @@ always_comb begin:WR_FSM
 
         WAIT_MSG_RSP: begin
             if(msg_valid) begin
-                if(wr_req_pending) begin
-                    wr_ns = WR_REQ;
-                end else if(rd_req_pending) begin
+                if(rd_req_pending) begin
                     wr_ns = RD_REQ;
                 end else begin
                     wr_ns = WAIT_LOOKUP;
@@ -406,7 +406,7 @@ always_comb begin:WR_FSM
             if(req_hsked && !rd_req_pending) begin
                 wr_ns = UPDATE_LIST_DONE;
             end else if(req_hsked && rd_req_pending) begin
-                wr_ns = RD_REQ;
+                wr_ns = MSG_REQ;
             end else begin
                 wr_ns = UPDATE_LIST;
             end
