@@ -10,8 +10,8 @@ module list_ctrl
                 input  logic [index_lenth - 1 :0]          acc_index_0,
                 output logic [2:0]                         acc_status_0,
                 input  logic [2:0]                         acc_cmd_0,
-                input  logic [$clog2(list_depth) - 1 : 0] acc_tag_0,
-                output logic [$clog2(list_depth) - 1 : 0] return_tag_0,
+                input  logic [$clog2(list_depth) - 1 : 0]  acc_tag_0,
+                output logic [$clog2(list_depth) - 1 : 0]  return_tag_0,
                 output logic [index_lenth         - 1 : 0] return_index_0,
                 input  logic                               acc_req_0,
                 output logic                               acc_gnt_0,
@@ -21,8 +21,8 @@ module list_ctrl
                 input  logic [index_lenth - 1 :0]          acc_index_1,
                 output logic [2:0]                         acc_status_1,
                 input  logic [2:0]                         acc_cmd_1,
-                input  logic [$clog2(list_depth) - 1 : 0] acc_tag_1,
-                output logic [$clog2(list_depth) - 1 : 0] return_tag_1,
+                input  logic [$clog2(list_depth) - 1 : 0]  acc_tag_1,
+                output logic [$clog2(list_depth) - 1 : 0]  return_tag_1,
                 output logic [index_lenth         - 1 : 0] return_index_1,
                 input  logic                               acc_req_1,
                 output logic                               acc_gnt_1,
@@ -31,8 +31,8 @@ module list_ctrl
                 input  logic [index_lenth - 1 :0]          acc_index_2,
                 output logic [2:0]                         acc_status_2,
                 input  logic [2:0]                         acc_cmd_2,
-                input  logic [$clog2(list_depth) - 1 : 0] acc_tag_2,
-                output logic [$clog2(list_depth) - 1 : 0] return_tag_2,
+                input  logic [$clog2(list_depth) - 1 : 0]  acc_tag_2,
+                output logic [$clog2(list_depth) - 1 : 0]  return_tag_2,
                 output logic [index_lenth         - 1 : 0] return_index_2,
                 input  logic                               acc_req_2,
                 output logic                               acc_gnt_2
@@ -46,6 +46,11 @@ logic [$clog2(list_depth) - 1 : 0] hit_tag_1;
 logic [$clog2(list_depth) - 1 : 0] hit_tag_2;
 logic [$clog2(list_depth) - 1 : 0] proc_tag_0;
 logic [$clog2(list_depth) - 1 : 0] proc_tag_1;
+
+logic acc_update_0;
+logic acc_update_1;
+logic [$clog2(list_depth) - 1 : 0] acc_update_tag_0;
+logic [$clog2(list_depth) - 1 : 0] acc_update_tag_1;
 logic allocate_0, allocate_1;
 logic tag0_is_head;
 logic tag0_is_tail;
@@ -110,7 +115,7 @@ end
 
 always_comb begin
     acc_gnt_0 = 1'b1;
-    if((acc_cmd_0 == 3'b00 || acc_cmd_0 == 3'b01 || acc_cmd_0 == 3'b10) && acc_hsked_2 &&
+    if((acc_cmd_0 == 3'b00 || acc_cmd_0 == 3'b01 || acc_cmd_0 == 3'b10) && acc_req_2 &&
                         (((acc_cmd_2 == 3'b000) && acc_hit_2) || (acc_cmd_2 != 3'b000))) begin
         acc_gnt_0 = 1'b0;
     end else if(acc_cmd_0 == 3'b10 && allocate_busy) begin
@@ -124,7 +129,7 @@ end
 always_comb begin
     acc_gnt_1 = 1'b1;
     if((acc_cmd_1 == 3'b00 || acc_cmd_1 == 3'b01 || acc_cmd_1 == 3'b10) && 
-            acc_hsked_2 && (((acc_cmd_2 == 3'b00) && acc_hit_2) || (acc_cmd_2 != 3'b000))) begin
+            acc_req_2 && (((acc_cmd_2 == 3'b00) && acc_hit_2) || (acc_cmd_2 != 3'b000))) begin
         acc_gnt_1 = 1'b0;
     end else if(acc_cmd_1 == 3'b10 && allocate_busy) begin
         acc_gnt_1 = 1'b0;
@@ -141,6 +146,8 @@ always_comb begin
     if(acc_cmd_2 == 3'b00 && tag_table[hit_tag_2].status == 3'b110) begin
         acc_gnt_2 = 1'b0;
     end else if(acc_cmd_2 == 3'b00 && tag_table[hit_tag_2].status == 3'b100) begin
+        acc_gnt_2 = 1'b0;
+    end else if(acc_update_0 || acc_update_1) begin
         acc_gnt_2 = 1'b0;
     end
 end
@@ -184,11 +191,40 @@ always_comb begin
     end
 end
 
-assign proc_tag_0 = acc_hit_0 ? hit_tag_0 : return_tag_0;
-assign proc_tag_1 = acc_hit_1 ? hit_tag_1 : return_tag_1;
 
-assign proc_hit_0 = acc_hsked_0 && acc_hit_0 || ((acc_cmd_0 == 3'b10) && acc_hsked_0 && free_list.empty);
-assign proc_hit_1 = acc_hsked_1 && acc_hit_1 || ((acc_cmd_1 == 3'b10) && acc_hsked_1 && (free_list.empty || (free_list.length <= 1 && allocate_0)));
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        acc_update_0 <= 1'b0;
+        acc_update_tag_0 <= 0;
+    end else if(acc_hsked_0 && acc_hit_0) begin
+        acc_update_0 <= 1'b1;
+        acc_update_tag_0 <= hit_tag_0;
+    end else begin
+        acc_update_0 <= 1'b0;
+        acc_update_tag_0 <= 0;
+    end
+end
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        acc_update_1 <= 1'b0;
+        acc_update_tag_1 <= 0;
+    end else if(acc_hsked_1 && acc_hit_1) begin
+        acc_update_1 <= 1'b1;
+        acc_update_tag_1 <= hit_tag_1;
+    end else begin
+        acc_update_1 <= 1'b0;
+        acc_update_tag_1 <= 0;
+    end
+end
+
+
+
+assign proc_tag_0 = acc_update_0 ? acc_update_tag_0 : return_tag_0;
+assign proc_tag_1 = acc_update_1 ? acc_update_tag_1 : return_tag_1;
+
+assign proc_hit_0 = acc_update_0 || ((acc_cmd_0 == 3'b10) && acc_hsked_0 && free_list.empty);
+assign proc_hit_1 = acc_update_1 || ((acc_cmd_1 == 3'b10) && acc_hsked_1 && (free_list.empty || (free_list.length <= 1 && allocate_0)));
 
 assign allocate_0 = (acc_cmd_0 == 3'b10) && acc_hsked_0 && !free_list.empty;
 assign allocate_1 = (acc_cmd_1 == 3'b10) && acc_hsked_1 && ((free_list.length > 1) || (!allocate_0 && !free_list.empty));
@@ -252,6 +288,26 @@ always_ff@(posedge clk or negedge rst_n) begin
         free_list.head <= 0;
         free_list.tail <= list_depth - 1;
         free_list.length <= list_depth;
+    end else if(acc_hsked_2 && acc_cmd_2 == 3'b010) begin
+        if(acc_tag_2 == lru_list.tail && acc_tag_2!= lru_list.head) begin
+            lru_list.tail <= tag_table[acc_tag_2].pre_tag;
+            lru_list.length <= lru_list.length - 1'b1;
+        end else if(acc_tag_2 == lru_list.head && acc_tag_2 != lru_list.tail) begin
+            lru_list.head <= tag_table[acc_tag_2].nxt_tag;
+            lru_list.length <= lru_list.length - 1'b1;
+        end else begin
+            lru_list.head <= lru_list.head;
+            lru_list.length <= lru_list.length - 1'b1;
+        end
+        if(free_list.empty) begin
+            free_list.head <= acc_tag_2;
+            free_list.tail <= acc_tag_2;
+            free_list.length <= 1'b1;
+        end else begin
+            free_list.head <= acc_tag_2;
+            free_list.tail <= free_list.tail;
+            free_list.length <= free_list.length + 1'b1;
+        end
     end else if(allocate_0 && allocate_1 && !lru_list.empty) begin
         lru_list.head <= return_tag_0;
         lru_list.length <= lru_list.length + 2;
@@ -394,6 +450,24 @@ always_ff@(posedge clk or negedge rst_n) begin
                         tag_table[i].nxt_tag <= i + 1;
                     end
             end
+    end else if(acc_hsked_2 && acc_cmd_2 == 3'b010) begin
+        if(acc_tag_2 == lru_list.tail && !free_list.empty) begin
+            tag_table[acc_tag_2].nxt_tag <= free_list.head;
+            tag_table[free_list.head].pre_tag <= acc_tag_2;
+        end else if(acc_tag_2 == lru_list.head && !free_list.empty) begin
+                    tag_table[acc_tag_2].nxt_tag <= free_list.head;
+                    tag_table[free_list.head].pre_tag <= acc_tag_2;
+        end else if(acc_tag_2 != lru_list.tail && acc_tag_2 != lru_list.head) begin
+            if(free_list.empty) begin
+                tag_table[tag_table[acc_tag_2].pre_tag].nxt_tag <= tag_table[acc_tag_2].nxt_tag;
+                tag_table[tag_table[acc_tag_2].nxt_tag].pre_tag <= tag_table[acc_tag_2].pre_tag;
+            end else begin
+                tag_table[tag_table[acc_tag_2].pre_tag].nxt_tag <= tag_table[acc_tag_2].nxt_tag;
+                tag_table[tag_table[acc_tag_2].nxt_tag].pre_tag <= tag_table[acc_tag_2].pre_tag;
+                tag_table[acc_tag_2].nxt_tag <= free_list.head;
+                tag_table[free_list.head].pre_tag <= acc_tag_2;
+            end
+        end
     end else if(allocate_0 && allocate_1 && !lru_list.empty) begin
         tag_table[return_tag_0].nxt_tag <= return_tag_1;
         tag_table[return_tag_1].pre_tag <= return_tag_0;

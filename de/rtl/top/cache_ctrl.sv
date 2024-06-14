@@ -37,11 +37,11 @@ module cache_ctrl #(
     input  logic [data_width - 1 : 0] rd_data,
     input  logic                      rd_done,
     input  logic                      rd_valid,
-    output   logic                                     msg_req,
-    input    logic                                     msg_gnt,
-    output   logic [4 + 2 * id_width - 1 : 0] msg,
-    input    logic                                     msg_in_valid,
-    input    logic [4 + 2 * id_width - 1 : 0] msg_in,
+    output logic                                         msg_req,
+    input  logic                                         msg_gnt,
+    output logic [4 + 2 * id_width + addr_width - 1 : 0] msg,
+    input  logic                                         msg_in_valid,
+    input  logic [4 + 2 * id_width + addr_width - 1 : 0] msg_in,
     output logic                      rd_ready);
 
 

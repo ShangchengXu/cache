@@ -45,11 +45,11 @@ module msg_ctrl #(
                     output   logic                                     msg_gnt_1,
     
     
-                    output   logic                                     msg_req,
-                    input    logic                                     msg_gnt,
-                    output   logic [4 + 2 * id_width - 1 : 0] msg,
-                    input    logic                                     msg_in_valid,
-                    input    logic [4 + 2 * id_width - 1 : 0] msg_in
+                    output   logic                                         msg_req,
+                    input    logic                                         msg_gnt,
+                    output   logic [4 + 2 * id_width + addr_width - 1 : 0] msg,
+                    input    logic                                         msg_in_valid,
+                    input    logic [4 + 2 * id_width - 1 + addr_width : 0] msg_in
                 );
 // msg
 // 4'b010 : rd_normal_ack
@@ -61,6 +61,7 @@ typedef struct packed {
     logic [3:0] msg;
     logic [id_width - 1 : 0] ta;
     logic [id_width - 1 : 0] ra;
+    logic [addr_width - 1 :0] addr;
 } msg_t;
 
 logic acc_hsked;
@@ -71,6 +72,9 @@ logic msg_send_gnt;
 msg_t msg_send;
 logic [$clog2(list_depth) - 1 : 0]        return_tag_ff;
 logic [addr_width - 1 :0]                 return_index_ff;
+
+logic [addr_width - 1 :0]                 msg_index_wr_local;
+logic [addr_width - 1 :0]                 msg_index_rd_local;
 
 logic [2:0] acc_status_ff;
 
@@ -443,12 +447,15 @@ always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         msg_wr_local <= 4'b0;
         rsp_owner_wr <= 2'b00;
+        msg_index_wr_local <= 0;
     end else if(msg_wr_gnt[0]) begin
         msg_wr_local <= msg_0;
         rsp_owner_wr <= 2'b00;
+        msg_index_wr_local <= msg_index_0;
     end else if(msg_wr_gnt[1]) begin
         msg_wr_local <= msg_1;
         rsp_owner_wr <= 2'b01;
+        msg_index_wr_local <= msg_index_1;
     end
 end
 
@@ -456,12 +463,15 @@ always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         msg_rd_local <= 4'b0;
         rsp_owner_rd <= 2'b00;
+        msg_index_rd_local <= 0;
     end else if(msg_rd_gnt[0]) begin
         msg_rd_local <= msg_0;
         rsp_owner_rd <= 2'b00;
+        msg_index_rd_local <= msg_index_0;
     end else if(msg_rd_gnt[1]) begin
         msg_rd_local <= msg_1;
         rsp_owner_rd <= 2'b01;
+        msg_index_rd_local <= msg_index_1;
     end
 end
 
@@ -529,15 +539,17 @@ end
 
 
 always_comb begin
-    msg_wr.msg = 4'b100;
+    msg_wr.msg = msg_wr_local;
     msg_wr.ta = cache_id;
     msg_wr.ra = {id_width{1'b1}};
+    msg_wr.addr = msg_index_wr_local;
 end
 
 always_comb begin
-    msg_rd.msg = 4'b101;
+    msg_rd.msg = msg_rd_local;
     msg_rd.ta = cache_id;
     msg_rd.ra = {id_width{1'b1}};
+    msg_rd.addr = msg_index_rd_local;
 end
 
 always_comb begin
@@ -550,6 +562,7 @@ always_comb begin
     end 
     msg_send.ta = cache_id;
     msg_send.ra = msg_proc.ta;
+    msg_send.addr = msg_proc.addr;
 end
 
 
@@ -635,6 +648,6 @@ end
 
 assign acc_tag = rsp_cs == RSP_REQ ? 0 : return_tag_ff;
 
-assign acc_index = 0;
+assign acc_index = msg_proc.addr;
 
 endmodule
