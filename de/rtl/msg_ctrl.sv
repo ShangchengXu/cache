@@ -489,7 +489,7 @@ generate
                 end else begin
                     rsp_bitmap_wr[i] <= 1'b0;
                 end
-            end else if(msg_wr_proc && msg_in_valid && (msg_local.msg == 4'b010 || msg_local.msg == 4'b011) &&
+            end else if(msg_wr_proc && msg_in_valid && (msg_local.msg == 4'b000) &&
                                                     msg_local.ra == cache_id && msg_local.ta == i) begin
                 rsp_bitmap_wr[i] <= 1'b1;
             end else if(!msg_wr_proc) begin
@@ -509,7 +509,7 @@ generate
                 end else begin
                     rsp_bitmap_rd[i] <= 1'b0;
                 end
-            end else if(msg_rd_proc && msg_in_valid && (msg_local.msg == 4'b000) &&
+            end else if(msg_rd_proc && msg_in_valid && (msg_local.msg == 4'b010 || msg_local.msg == 4'b011) &&
                                                     msg_local.ra == cache_id && msg_local.ta == i) begin
                 rsp_bitmap_rd[i] <= 1'b1;
             end else if(!msg_rd_proc) begin

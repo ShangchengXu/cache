@@ -20,8 +20,8 @@ class cache_ctrl_case0_vseq extends uvm_sequence;
       fork
          dseq.start(p_sequencer.sqr0);
          dseq1.start(p_sequencer.sqr1);
-         // dseq2.start(p_sequencer.sqr2);
-         // dseq3.start(p_sequencer.sqr3);
+         dseq2.start(p_sequencer.sqr2);
+         dseq3.start(p_sequencer.sqr3);
       join
       
    endtask
