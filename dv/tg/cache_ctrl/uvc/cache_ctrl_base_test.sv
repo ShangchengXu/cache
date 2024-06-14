@@ -1,6 +1,7 @@
 class cache_ctrl_base_test extends uvm_test;
 
    cache_ctrl_env         env;
+   cache_ctrl_env         env1;
    cache_ctrl_vsqr        vsqr;
    
    function new(string name = "cache_ctrl_base_test", uvm_component parent = null);
@@ -21,13 +22,20 @@ endtask
 function void cache_ctrl_base_test::build_phase(uvm_phase phase);
    super.build_phase(phase);
    env  =  cache_ctrl_env::type_id::create("env", this); 
+   env1  =  cache_ctrl_env::type_id::create("env1", this); 
    vsqr =  cache_ctrl_vsqr::type_id::create("vsqr", this); 
+   for(int i = 0; i < 4096; i++) begin
+      memory::mem[i] = $random();
+   end
 endfunction
 
 function void cache_ctrl_base_test::connect_phase(uvm_phase phase);
    super.connect_phase(phase);
    vsqr.sqr0 = env.mst_agt.sqr;
    vsqr.sqr1 = env.mst_agt1.sqr;
+
+   vsqr.sqr2 = env1.mst_agt.sqr;
+   vsqr.sqr3 = env1.mst_agt1.sqr;
 endfunction
 
 

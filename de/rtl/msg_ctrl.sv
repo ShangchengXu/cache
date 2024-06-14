@@ -610,14 +610,14 @@ cache_rr_arb #(
         .req_end     (msg_gnt_local      ) ,//input   [WIDTH - 1 : 0]
         .gnt         (msg_gnt_local      ));//output  [WIDTH - 1 : 0]
 
-assign req_fifo_write = msg_in_valid && msg_local.ra == cache_id && msg_local.msg[2] == 1'b1;
+assign req_fifo_write = msg_in_valid && msg_local.ta != cache_id && msg_local.msg[2] == 1'b1;
 assign req_fifo_read = rsp_cs == RSP_DONE;
 assign msg_proc = req_fifo_read_data;
 
 
 cache_sync_fifo #(
         .DATA_WIDTH  (4 + 2 * id_width + addr_width),
-        .FIFO_DEPTH  (cache_num               ))
+        .FIFO_DEPTH  (cache_num * 2        ))
                 req_fifo (
         .clk         (clk                  ) ,//input   
         .rst_n       (rst_n                ) ,//input   

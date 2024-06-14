@@ -5,5 +5,7 @@
 ../../../../../de/rtl/cache_rr_arb.sv
 ../../../../../de/rtl/fetch_ctrl.sv
 ../../../../../de/rtl/msg_ctrl.sv
+../../../../../de/rtl/msg_arb.sv
+../../../../../de/rtl/mux.sv
 ../../../../../de/rtl/cache_sync_fifo.sv
 ../../../../../de/rtl/top/cache_ctrl.sv

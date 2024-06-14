@@ -20,7 +20,6 @@ function void cache_ctrl_model::build_phase(uvm_phase phase);
    port = new("port", this);
    ap = new("ap", this);
    for(int i = 0; i < 4096; i++) begin
-      memory::mem[i] = $random();
       mem[i] = memory::mem[i];
    end
 endfunction
