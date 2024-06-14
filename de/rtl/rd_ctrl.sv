@@ -528,5 +528,17 @@ always_ff@(posedge clk or negedge rst_n) begin
     end
 end
 
-assign acc_rd_done = mem_rhsked;
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        acc_rd_done = 1'b0;
+    end else if (mem_rhsked) begin
+        acc_rd_done = 1'b1;
+    end else begin
+        acc_rd_done = 1'b0;
+    end
+end
+
+
+
 endmodule

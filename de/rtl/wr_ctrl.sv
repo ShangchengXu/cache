@@ -523,6 +523,14 @@ assign msg = 3'b100;
 
 assign msg_index = acc_index;
 
-assign acc_wr_done = mem_whsked;
 
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        acc_wr_done = 1'b0;
+    end else if (mem_whsked) begin
+        acc_wr_done = 1'b1;
+    end else begin
+        acc_wr_done = 1'b0;
+    end
+end
 endmodule
