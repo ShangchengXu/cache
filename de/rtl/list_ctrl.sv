@@ -115,12 +115,14 @@ end
 
 always_comb begin
     acc_gnt_0 = 1'b1;
-    if((acc_cmd_0 == 3'b00 || acc_cmd_0 == 3'b01 || acc_cmd_0 == 3'b10) && acc_req_2 &&
+    if((((acc_cmd_0 == 3'b00 || acc_cmd_0 == 3'b01) ) || acc_cmd_0 == 3'b10) && acc_req_2  &&
                         (((acc_cmd_2 == 3'b000) && acc_hit_2) || (acc_cmd_2 != 3'b000))) begin
         acc_gnt_0 = 1'b0;
     end else if(acc_cmd_0 == 3'b10 && allocate_busy) begin
         acc_gnt_0 = 1'b0;
-    end else if(acc_cmd_0 == 3'b00 && tag_table[hit_tag_0].status == 3'b110) begin
+    end else if(acc_cmd_0 == 3'b10 && (tag_table[return_tag_0].status == 3'b110 || tag_table[return_tag_0].status == 3'b100)) begin
+        acc_gnt_0 = 1'b0;
+    end else if(acc_cmd_0 == 3'b00 && acc_hit_0 && tag_table[hit_tag_0].status == 3'b110) begin
         acc_gnt_0 = 1'b0;
     end
 end
@@ -128,12 +130,14 @@ end
 
 always_comb begin
     acc_gnt_1 = 1'b1;
-    if((acc_cmd_1 == 3'b00 || acc_cmd_1 == 3'b01 || acc_cmd_1 == 3'b10) && 
+    if((((acc_cmd_1 == 3'b00 || acc_cmd_1 == 3'b01) ) || acc_cmd_1 == 3'b10)  && 
             acc_req_2 && (((acc_cmd_2 == 3'b00) && acc_hit_2) || (acc_cmd_2 != 3'b000))) begin
         acc_gnt_1 = 1'b0;
     end else if(acc_cmd_1 == 3'b10 && allocate_busy) begin
         acc_gnt_1 = 1'b0;
-    end else if(acc_cmd_1 == 3'b00 && tag_table[hit_tag_1].status == 3'b110) begin
+    end else if(acc_cmd_1 == 3'b10 && (tag_table[return_tag_1].status == 3'b110 || tag_table[return_tag_1].status == 3'b100)) begin
+        acc_gnt_1 = 1'b0;
+    end else if(acc_cmd_1 == 3'b00 && acc_hit_1 && tag_table[hit_tag_1].status == 3'b110) begin
         acc_gnt_1 = 1'b0;
     end
 end
@@ -143,9 +147,9 @@ end
 //01 : update -> invalid
 always_comb begin
     acc_gnt_2 = 1'b1;
-    if(acc_cmd_2 == 3'b00 && tag_table[hit_tag_2].status == 3'b110) begin
+    if(acc_cmd_2 == 3'b00 && tag_table[hit_tag_2].status == 3'b110 && acc_hit_2) begin
         acc_gnt_2 = 1'b0;
-    end else if(acc_cmd_2 == 3'b00 && tag_table[hit_tag_2].status == 3'b100) begin
+    end else if(acc_cmd_2 == 3'b00 && tag_table[hit_tag_2].status == 3'b100 && acc_hit_2) begin
         acc_gnt_2 = 1'b0;
     end else if(acc_update_0 || acc_update_1) begin
         acc_gnt_2 = 1'b0;
@@ -183,7 +187,7 @@ always_comb begin
     hit_tag_2 = 0;
     acc_hit_2 = 1'b0;
     for(integer i = 0; i < list_depth; i++) begin
-        if(tag_table[2].status != 3'b000 && tag_table[i].index == acc_index_2 &&
+        if(tag_table[i].status != 3'b000 && tag_table[i].index == acc_index_2 &&
                                  (acc_cmd_2 == 3'b00)) begin
             hit_tag_2 = i;
             acc_hit_2 = 1'b1;
@@ -243,13 +247,13 @@ assign hit_comflict = proc_tag_0 == proc_tag_1;
 
 always_comb begin
     return_tag_0 = 0;
-    if(allocate_0) begin
+    if(acc_cmd_0 == 3'b10 && !free_list.empty) begin
         return_tag_0 = free_list.tail;
-    end else if((acc_cmd_0 == 3'b10)&& acc_hsked_0 && free_list.empty) begin
+    end else if((acc_cmd_0 == 3'b10)  && free_list.empty) begin
         return_tag_0 = lru_list.tail;
-    end else if(acc_hsked_0 && acc_cmd_0 == 3'b00 && acc_hit_0) begin
+    end else if(acc_cmd_0 == 3'b00 && acc_hit_0) begin
         return_tag_0 = hit_tag_0;
-    end else if(acc_hsked_0 && acc_cmd_0 == 3'b01 && acc_hit_0) begin
+    end else if(acc_cmd_0 == 3'b01 && acc_hit_0) begin
         return_tag_0 = hit_tag_0;
     end
 end
@@ -259,21 +263,25 @@ assign return_tag_2 = hit_tag_2;
 
 always_comb begin
     return_tag_1 = 0;
-    if(allocate_1) begin
-        if(allocate_0) begin
+    if(acc_cmd_1 == 3'b10 && acc_req_0 && acc_cmd_0 == 2'b10 && (free_list.length > 1)) begin
             return_tag_1 = tag_table[free_list.tail].pre_tag;
-        end else begin
+    end else if (acc_cmd_1 == 3'b10 && acc_req_0 && acc_cmd_0 == 2'b10 && (free_list.length == 1)) begin
+            return_tag_1 = lru_list.tail;
+    end else if (acc_cmd_1 == 3'b10 && acc_req_0 && acc_cmd_0 == 2'b10 && (free_list.empty)) begin
+            return_tag_1 = tag_table[lru_list.tail].pre_tag;
+    end else if (acc_cmd_1 == 3'b10 && !(free_list.empty)) begin
             return_tag_1 = free_list.tail;
-        end
-    end else if((acc_cmd_1 == 3'b10)&& acc_hsked_1 && free_list.empty) begin
-        if((acc_cmd_0 == 3'b10)&& acc_hsked_0) begin
+    end else if((acc_cmd_1 == 3'b10)  && free_list.empty) begin
+        if((acc_cmd_0 == 3'b10)&& acc_req_0) begin
             return_tag_1 = tag_table[lru_list.tail].pre_tag;
         end else begin
             return_tag_1 = lru_list.tail;
         end
-    end else if(acc_hsked_1 && acc_cmd_1 == 3'b00 && acc_hit_1) begin
+    end else if((acc_cmd_1 == 3'b10)  && !free_list.empty) begin
+        return_tag_1 = lru_list.tail;
+    end else if(acc_cmd_1 == 3'b00 && acc_hit_1) begin
         return_tag_1 = hit_tag_1;
-    end else if(acc_hsked_1 && acc_cmd_1 == 3'b01 && acc_hit_1) begin
+    end else if(acc_cmd_1 == 3'b01 && acc_hit_1) begin
         return_tag_1 = hit_tag_1;
     end
 end

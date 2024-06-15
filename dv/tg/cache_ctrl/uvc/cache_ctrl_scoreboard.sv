@@ -33,10 +33,11 @@ task cache_ctrl_scoreboard::main_phase(uvm_phase phase);
          $cast(actual_tr, get_actual);
             result = actual_tr.compare(expect_tr);
             if(result) begin 
-               `uvm_info("cache_ctrl_scoreboard", "Compare SUCCESSFULLY", UVM_LOW);
+               // `uvm_info("cache_ctrl_scoreboard", "Compare SUCCESSFULLY", UVM_LOW);
             end
             else begin
                `uvm_error("cache_ctrl_scoreboard", "Compare FAILED");
+               expect_tr.print();
             end
       end
    join

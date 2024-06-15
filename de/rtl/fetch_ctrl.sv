@@ -118,7 +118,7 @@ rd_state_t rd_cs,rd_ns;
 
 assign fetch_rd_req_0 = fetch_req_0 && fetch_cmd_0 == 2'b01;
 assign fetch_rd_req_1 = fetch_req_1 && fetch_cmd_1 == 2'b01;
-assign fetch_rd_req_2 = fetch_req_1 && fetch_cmd_1 == 2'b01;
+assign fetch_rd_req_2 = fetch_req_2 && fetch_cmd_2 == 2'b01;
 
 assign fetch_wr_req_0 = fetch_req_0 && fetch_cmd_0 == 2'b00;
 assign fetch_wr_req_1 = fetch_req_1 && fetch_cmd_1 == 2'b00;

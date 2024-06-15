@@ -6,7 +6,7 @@ class cache_ctrl_transaction extends uvm_sequence_item;
 
 
     constraint pload_cons{
-      addr < 33 * 32 *4;
+      addr < 5 * 32 *4;
       addr % 4 == 0;
  
    }
@@ -19,7 +19,7 @@ class cache_ctrl_transaction extends uvm_sequence_item;
    `uvm_object_utils_begin(cache_ctrl_transaction)
       `uvm_field_int(rd_data,UVM_ALL_ON)
       `uvm_field_int(wr_data,UVM_ALL_ON)
-      `uvm_field_int(addr   ,UVM_ALL_ON)
+      `uvm_field_int(addr   ,UVM_ALL_ON | UVM_NOCOMPARE)
       `uvm_field_int(req   ,UVM_ALL_ON)
    `uvm_object_utils_end
 

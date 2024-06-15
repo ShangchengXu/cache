@@ -3,7 +3,7 @@ module cache_ctrl_tb;
 parameter mem_depth = 32;
 parameter data_width = 32;
 parameter addr_width = 32;
-parameter list_depth = 32;
+parameter list_depth = 4;
 parameter list_width = 32;
 parameter cache_num = 2;
 parameter cache_id = 0;

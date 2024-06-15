@@ -151,16 +151,18 @@ assign mem_whsked = mem_wen && mem_wready;
 
 assign acc_wr_ready = (wr_cs == IDLE) || (wr_cs == NORM);
 
-assign has_comflict = (proc_status_r == 3'b010) && (proc_addr_r == proc_addr_w);
+assign has_comflict = (proc_status_r == 3'b010 || proc_status_r == 3'b011) && (proc_addr_r == proc_addr_w);
 
-assign comflict_clear = (proc_status_r != 3'b010);
+assign comflict_clear = (proc_status_r != 3'b010) && (proc_status_r != 3'b011);
 
 always_comb begin
     if(cs_is_check_comflict) begin
         proc_status_w = 3'b001;
     end else if(wr_cs == WAIT_COMFLICT) begin
         proc_status_w = 3'b100;
-    end else if(cs_is_allocate_line || cs_is_fetch_req || (wr_cs == MSG_REQ) || (wr_cs == WAIT_MSG_RSP) ||
+    end else if(((wr_cs == MSG_REQ) || (wr_cs == WAIT_MSG_RSP)) && rd_req_pending) begin
+        proc_status_w = 3'b011;
+    end else if(cs_is_allocate_line || cs_is_fetch_req || 
                 cs_is_wait_fetch_comp || cs_is_acc_mem || (cs_is_update_list && rd_req_pending) ||
                 (cs_is_update_list && !rd_req_pending && !req_hsked)) begin
         proc_status_w = 3'b010;
@@ -205,6 +207,8 @@ always_ff@(posedge clk or negedge rst_n) begin
     end else if(wr_cs == WAIT_COMFLICT && wr_ns != WAIT_COMFLICT)begin
         return_tag_ff <= proc_tag_r;
     end else if((cs_is_allocate_line && req_hsked) || wr_hsked) begin
+        return_tag_ff <= return_tag;
+    end else if(wr_cs == WAIT_LOOKUP && req_hsked) begin
         return_tag_ff <= return_tag;
     end
 end
@@ -526,11 +530,11 @@ assign msg_index = acc_index;
 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
-        acc_wr_done = 1'b0;
+        acc_wr_done <= 1'b0;
     end else if (mem_whsked) begin
-        acc_wr_done = 1'b1;
+        acc_wr_done <= 1'b1;
     end else begin
-        acc_wr_done = 1'b0;
+        acc_wr_done <= 1'b0;
     end
 end
 endmodule

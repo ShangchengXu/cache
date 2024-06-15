@@ -29,6 +29,16 @@ module msg_ctrl #(
                     output   logic [addr_width - 1 : 0]                fetch_addr,
                     input    logic                                     fetch_gnt,
                     input    logic                                     fetch_done,
+
+
+
+                    input    logic [2:0]                               proc_status_r,
+                    input    logic [addr_width - 1 : 0]                proc_addr_r,
+                    input    logic [$clog2(list_depth) - 1 : 0]        proc_tag_r,
+
+                    input    logic [2:0]                               proc_status_w,
+                    input    logic [addr_width - 1 : 0]                proc_addr_w,
+                    input    logic [$clog2(list_depth) - 1 : 0]        proc_tag_w,
     
                     input    logic                                     msg_req_0,
                     input    logic [3:0]                               msg_0,
@@ -64,6 +74,28 @@ typedef struct packed {
     logic [addr_width - 1 :0] addr;
 } msg_t;
 
+
+localparam req_queue_depth = cache_num * 2;
+localparam req_queue_ptr_width = $clog2(req_queue_depth) + 1;
+typedef struct packed {
+    msg_t msg;
+    logic valid;
+} req_queue_t;
+
+req_queue_t req_queue [req_queue_depth];
+
+logic [req_queue_ptr_width : 0] req_queue_wptr,req_queue_rptr;
+
+logic req_queue_empty;
+
+logic req_queue_full;
+
+
+logic wr_req_pending, rd_req_pending;
+
+logic wr_req_wait, rd_req_wait;
+
+
 logic acc_hsked;
 logic fetch_hsked;
 logic msg_send_hsked;
@@ -78,12 +110,8 @@ logic [addr_width - 1 :0]                 msg_index_rd_local;
 
 logic [2:0] acc_status_ff;
 
-logic req_fifo_empty;
-logic req_fifo_full;
-logic [4 + 2 * id_width + addr_width - 1 : 0] req_fifo_read_data;
-logic [id_width : 0] req_fifo_data_num;
-logic req_fifo_write;
-logic req_fifo_read;
+logic req_queue_write;
+logic req_queue_read;
 msg_t msg_proc;
 msg_t msg_local;
 
@@ -249,7 +277,7 @@ always_comb begin: RSP_FSM
     case(rsp_cs)
 
     RSP_IDLE: begin
-        if(!req_fifo_empty) begin
+        if(!req_queue_empty) begin
             rsp_ns = RSP_REQ; 
         end else begin
             rsp_ns = RSP_IDLE; 
@@ -262,11 +290,15 @@ always_comb begin: RSP_FSM
                 rsp_ns = RSP_MSG_REQ;
             end else if(acc_status == 3'b010) begin
                 rsp_ns = RSP_WB_REQ;
-            end else if(acc_status == 3'b001 || acc_status == 3'b010) begin
+            end else if(acc_status == 3'b001 || acc_status == 3'b011) begin
                 rsp_ns = RSP_UPDATE;
             end else begin
                 rsp_ns = RSP_REQ;
             end
+        end else if(proc_status_r == 3'b011 && proc_addr_r == msg_proc.addr) begin
+            rsp_ns = RSP_MSG_REQ;
+        end else if(proc_status_w == 3'b011 && proc_addr_w == msg_proc.addr) begin
+            rsp_ns = RSP_MSG_REQ;
         end else begin
             rsp_ns = RSP_REQ;
         end
@@ -323,6 +355,9 @@ assign msg_rd_req_1 = msg_req_1 && (msg_1 == 3'b101) && (msg_rd_cs == IDLE);
 assign msg_wr_req_0 = msg_req_0 && (msg_0 == 3'b100) && (msg_wr_cs == IDLE);
 assign msg_wr_req_1 = msg_req_1 && (msg_1 == 3'b100) && (msg_wr_cs == IDLE);
 
+
+assign wr_req_wait = wr_req_pending ;
+assign rd_req_wait = rd_req_pending ;
 
 generate 
 if(cache_num == 1) begin: SINGLE_CACHE
@@ -566,8 +601,8 @@ always_comb begin
 end
 
 
-assign msg_req_wr = msg_wr_cs == REQ;
-assign msg_req_rd = msg_rd_cs == REQ;
+assign msg_req_wr = msg_wr_cs == REQ && !wr_req_wait;
+assign msg_req_rd = msg_rd_cs == REQ && !rd_req_wait;
 assign msg_send_req = rsp_cs == RSP_MSG_REQ;
 
 assign msg_send_hsked = msg_send_req && msg_send_gnt;
@@ -610,25 +645,89 @@ cache_rr_arb #(
         .req_end     (msg_gnt_local      ) ,//input   [WIDTH - 1 : 0]
         .gnt         (msg_gnt_local      ));//output  [WIDTH - 1 : 0]
 
-assign req_fifo_write = msg_in_valid && msg_local.ta != cache_id && msg_local.msg[2] == 1'b1;
-assign req_fifo_read = rsp_cs == RSP_DONE;
-assign msg_proc = req_fifo_read_data;
+assign req_queue_write = msg_in_valid && msg_local.ta != cache_id && msg_local.msg[2] == 1'b1;
+assign req_queue_read = rsp_cs == RSP_DONE;
+assign msg_proc = req_queue[req_queue_rptr[req_queue_ptr_width - 2 : 0]].msg;
 
 
-cache_sync_fifo #(
-        .DATA_WIDTH  (4 + 2 * id_width + addr_width),
-        .FIFO_DEPTH  (cache_num * 2        ))
-                req_fifo (
-        .clk         (clk                  ) ,//input   
-        .rst_n       (rst_n                ) ,//input   
-        .soft_rst    (1'b0                 ) ,//input   
-        .write_data  (msg_in               ) ,//input   [DATA_WIDTH - 1 : 0]
-        .write       (req_fifo_write       ) ,//input   
-        .read        (req_fifo_read        ) ,//input   
-        .read_data   (req_fifo_read_data   ) ,//output  [DATA_WIDTH - 1 : 0]
-        .full        (req_fifo_full        ) ,//output  
-        .empty       (req_fifo_empty       ) ,//output  
-        .data_num    (req_fifo_data_num    ));//output  [$clog2(FIFO_DEPTH):0]
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        req_queue_rptr <= {req_queue_ptr_width{1'b0}};
+    end else if(req_queue_read) begin
+        if(req_queue_rptr[req_queue_ptr_width - 2 : 0] == (req_queue_depth - 1)) begin
+            req_queue_rptr[req_queue_ptr_width - 2 : 0] <= 0;
+            req_queue_rptr[req_queue_ptr_width - 1] <=  ~req_queue_rptr[req_queue_ptr_width - 1];
+        end else begin
+            req_queue_rptr <= req_queue_rptr + 1'b1;
+        end
+    end
+end
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        req_queue_wptr <= {req_queue_ptr_width{1'b0}};
+    end else if(req_queue_write) begin
+        if(req_queue_wptr[req_queue_ptr_width - 2 : 0] == (req_queue_depth - 1)) begin
+            req_queue_wptr[req_queue_ptr_width - 2 : 0] <= 0;
+            req_queue_wptr[req_queue_ptr_width - 1] <=  ~req_queue_wptr[req_queue_ptr_width - 1];
+        end else begin
+            req_queue_wptr <= req_queue_wptr + 1'b1;
+        end
+    end
+end
+
+generate
+    for(genvar i = 0; i < req_queue_depth; i++) begin:req_queue_grp
+        always_ff@(posedge clk or negedge rst_n) begin
+            if(!rst_n) begin
+                req_queue[i] <= 0;
+            end else if(req_queue_write && req_queue_wptr[req_queue_ptr_width - 2 : 0] == i) begin
+                req_queue[i].msg <= msg_in;
+                req_queue[i].valid <= 1'b1;
+            end else if(req_queue_read && req_queue_rptr[req_queue_ptr_width - 2 : 0] == i) begin
+                req_queue[i] <= 0;
+            end
+        end
+    end
+endgenerate
+
+assign req_queue_empty = req_queue_rptr == req_queue_wptr;
+assign req_queue_full = (req_queue_rptr[req_queue_ptr_width - 1] != req_queue_wptr[req_queue_ptr_width - 1]) && (req_queue_rptr[req_queue_ptr_width - 2 : 0] == req_queue_wptr[req_queue_ptr_width - 2 : 0]);
+
+always_comb begin
+    wr_req_pending = 1'b0;
+    for(integer  i = 0; i < req_queue_depth; i++) begin
+        if(req_queue[i].valid && req_queue[i].msg.addr == msg_index_wr_local) begin
+            wr_req_pending = 1'b1;
+        end
+    end
+end
+
+always_comb begin
+    rd_req_pending = 1'b0;
+    for(integer  i = 0; i < req_queue_depth; i++) begin
+        if(req_queue[i].valid && req_queue[i].msg.addr == msg_index_rd_local) begin
+            rd_req_pending = 1'b1;
+        end
+    end
+end
+
+
+// cache_sync_fifo #(
+//         .DATA_WIDTH  (4 + 2 * id_width + addr_width),
+//         .FIFO_DEPTH  (cache_num * 2        ))
+//                 req_queue (
+//         .clk         (clk                  ) ,//input   
+//         .rst_n       (rst_n                ) ,//input   
+//         .soft_rst    (1'b0                 ) ,//input   
+//         .write_data  (msg_in               ) ,//input   [DATA_WIDTH - 1 : 0]
+//         .write       (req_queue_write       ) ,//input   
+//         .read        (req_queue_read        ) ,//input   
+//         .read_data   (req_queue_read_data   ) ,//output  [DATA_WIDTH - 1 : 0]
+//         .full        (req_queue_full        ) ,//output  
+//         .empty       (req_queue_empty       ) ,//output  
+//         .data_num    (req_queue_data_num    ));//output  [$clog2(FIFO_DEPTH):0]
 
 
 assign acc_req = rsp_cs == RSP_REQ || rsp_cs == RSP_UPDATE;
@@ -639,7 +738,7 @@ always_comb begin
         acc_cmd = 3'b00;
     end else if(rsp_cs == RSP_UPDATE) begin
         if(msg_proc.msg == 4'b100) begin
-            acc_cmd = 3'b11;
+            acc_cmd = 3'b010;
         end else begin
             acc_cmd = 3'b01;
         end

@@ -364,6 +364,12 @@ msg_ctrl #(
         .fetch_gnt     (fetch_gnt_m   ) ,//input   
         .fetch_done    (fetch_done_m  ) ,//input   
         .msg_req_0     (msg_req_0     ) ,//input   
+        .proc_status_r (proc_status_r ) ,//input  [2:0]
+        .proc_addr_r   (proc_addr_r   ) ,//input  [addr_width - 1 : 0]
+        .proc_tag_r    (proc_tag_r    ) ,//input  [$ - 1 : 0]
+        .proc_tag_w    (proc_tag_w    ) ,//input  [$ - 1 : 0]
+        .proc_status_w (proc_status_w ) ,//input   [2:0]
+        .proc_addr_w   (proc_addr_w   ) ,//input   [addr_width - 1 : 0]
         .msg_0         (msg_0         ) ,//input   [3:0]
         .msg_index_0   (msg_index_0   ) ,//input   [addr_width - 1 :0]
         .msg_rsp_0     (msg_rsp_0     ) ,//output  [3:0]

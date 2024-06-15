@@ -4,7 +4,7 @@ parameter data_width = 32;
 parameter addr_width = 32;
 parameter cache_num = 2;
 parameter cache_id = 0;
-parameter list_depth = 32;
+parameter list_depth = 4;
 parameter list_width = 32;
 logic clk;
 logic rst_n;
