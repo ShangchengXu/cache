@@ -1,4 +1,4 @@
-set top_design cache_ctrl
+set top_design ro_cache_ctrl
 set sh_output_log_file  ./log/dc_output.log
 set sh_command_log_file ./log/dc_command.log
 
@@ -36,7 +36,7 @@ set current_design $top_design
 
 set clk_src(clk) [get_ports clk]
 
-set Period(300M) [expr 1000/500]
+set Period(300M) [expr 1000/300]
 
 create_clock  -name clk -period $Period(300M)  $clk_src(clk)
 
@@ -115,7 +115,7 @@ if { $insert_CG } {
 }
 
 report_constraint -all_violators -verbose > $report_path/report_constraint.rpt
-report_timing -max_path 10            > $report_path/report_timing.rpt
+report_timing  -max_path 10           > $report_path/report_timing.rpt
 report_timing -delay max -max_path 10 > $report_path/timing_setup.rpt
 report_timing -delay min -max_path 10 > $report_path/timing_hold.rpt
 report_area              > $report_path/report_area.rpt

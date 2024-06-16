@@ -82,6 +82,9 @@ task cache_ctrl_driver1::drive_one_pkt(cache_ctrl_transaction tr);
       end
    end
    vif.acc_wr_valid <= 1'b0;
+   repeat($urandom_range(20,0)) begin
+      @(posedge vif.clk);
+   end
 
    // `uvm_info("cache_ctrl_driver", "end drive one pkt", UVM_LOW);
 endtask

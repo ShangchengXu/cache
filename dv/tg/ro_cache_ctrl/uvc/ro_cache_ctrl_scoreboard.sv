@@ -1,27 +1,27 @@
-class cache_ctrl_scoreboard extends uvm_scoreboard;
-   cache_ctrl_transaction  expect_queue[$];
+class ro_cache_ctrl_scoreboard extends uvm_scoreboard;
+   ro_cache_ctrl_transaction  expect_queue[$];
    uvm_blocking_get_port #(uvm_sequence_item)  exp_port;
    uvm_blocking_get_port #(uvm_sequence_item)  act_port;
-   `uvm_component_utils(cache_ctrl_scoreboard)
+   `uvm_component_utils(ro_cache_ctrl_scoreboard)
 
    extern function new(string name, uvm_component parent = null);
    extern virtual function void build_phase(uvm_phase phase);
    extern virtual task main_phase(uvm_phase phase);
 endclass 
 
-function cache_ctrl_scoreboard::new(string name, uvm_component parent = null);
+function ro_cache_ctrl_scoreboard::new(string name, uvm_component parent = null);
    super.new(name, parent);
 endfunction 
 
-function void cache_ctrl_scoreboard::build_phase(uvm_phase phase);
+function void ro_cache_ctrl_scoreboard::build_phase(uvm_phase phase);
    super.build_phase(phase);
    exp_port = new("exp_port", this);
    act_port = new("act_port", this);
 endfunction 
 
-task cache_ctrl_scoreboard::main_phase(uvm_phase phase);
+task ro_cache_ctrl_scoreboard::main_phase(uvm_phase phase);
    uvm_sequence_item  get_expect,  get_actual;
-   cache_ctrl_transaction  expect_tr,  actual_tr, tmp_tran;
+   ro_cache_ctrl_transaction  expect_tr,  actual_tr, tmp_tran;
    bit result;
  
    super.main_phase(phase);

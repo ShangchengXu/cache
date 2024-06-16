@@ -6,18 +6,18 @@ module msg_arb #(
                     input logic            clk,
                     input logic            rst_n,
 
-                    output   logic [cache_num - 1 : 0]                                            msg_req,
-                    input    logic [cache_num - 1 : 0]                                            msg_gnt,
-                    output   logic [cache_num * (4 + 2 * $clog2(cache_num) + addr_width) - 1 : 0] msg,
+                    input    logic [cache_num - 1 : 0]                                            msg_req,
+                    output   logic [cache_num - 1 : 0]                                            msg_gnt,
+                    input    logic [cache_num * (4 + 2 * $clog2(cache_num) + addr_width) - 1 : 0] msg,
 
                     output   logic                                                                msg_out_valid,
-                    output   logic [4 + 2 * id_width - 1 + addr_width : 0]                        msg_out
+                    output   logic [4 + 2 * $clog2(cache_num) - 1 + addr_width : 0]               msg_out
                 );
 
 
 
 cache_rr_arb #(
-        .WIDTH       (2       ),
+        .WIDTH       (cache_num ),
         .REFLECTION  (0       ))
              cache_rr_arb_msg_inst (
         .clk         (clk                ) ,//input   
@@ -35,5 +35,5 @@ mux           #(.IN_WIDTH(cache_num * (4 + 2 * $clog2(cache_num) + addr_width)),
                 .dst_data(msg_out)
             );
 
-assign msg_out_valid = gnt;
+assign msg_out_valid = |msg_gnt;
 endmodule
