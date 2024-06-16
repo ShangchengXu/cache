@@ -295,9 +295,17 @@ always_comb begin: RSP_FSM
             end else begin
                 rsp_ns = RSP_REQ;
             end
-        end else if(proc_status_r == 3'b011 && proc_addr_r == msg_proc.addr) begin
+        end else if(proc_status_r == 3'b011 && proc_addr_r == msg_proc.addr && !rsp_bitmap_rd[msg_proc.ta] && rsp_owner_rd == 2'b01 && (msg_rd_cs != IDLE)) begin
             rsp_ns = RSP_MSG_REQ;
-        end else if(proc_status_w == 3'b011 && proc_addr_w == msg_proc.addr) begin
+        end else if(proc_status_r == 3'b011 && proc_addr_r == msg_proc.addr && !rsp_bitmap_wr[msg_proc.ta] && rsp_owner_wr == 2'b01 && (msg_wr_cs != IDLE)) begin
+            rsp_ns = RSP_MSG_REQ;
+        end else if(proc_status_r == 3'b011 && proc_addr_r == msg_proc.addr && ((rsp_owner_rd != 2'b01 || msg_rd_cs == IDLE) && (rsp_owner_wr != 2'b01 || msg_wr_cs == IDLE))) begin
+            rsp_ns = RSP_MSG_REQ;
+        end else if(proc_status_w == 3'b011 && proc_addr_w == msg_proc.addr && !rsp_bitmap_wr[msg_proc.ta] && rsp_owner_wr == 2'b00 && (msg_wr_cs != IDLE)) begin
+            rsp_ns = RSP_MSG_REQ;
+        end else if(proc_status_w == 3'b011 && proc_addr_w == msg_proc.addr && !rsp_bitmap_rd[msg_proc.ta] && rsp_owner_rd == 2'b00 && (msg_rd_cs != IDLE)) begin
+            rsp_ns = RSP_MSG_REQ;
+        end else if(proc_status_w == 3'b011 && proc_addr_w == msg_proc.addr && ((rsp_owner_rd != 2'b00 || msg_rd_cs == IDLE) && (rsp_owner_wr != 2'b00 || msg_wr_cs == IDLE))) begin
             rsp_ns = RSP_MSG_REQ;
         end else begin
             rsp_ns = RSP_REQ;

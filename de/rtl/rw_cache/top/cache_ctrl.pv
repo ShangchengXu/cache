@@ -1,0 +1,48 @@
+module cache_ctrl(/*ports*/);
+/*vars*/
+
+list_ctrl list_ctrl_inst(/*inst*/)
+{   
+
+}
+
+mem_ctrl mem_ctrl_inst(/*inst*/)
+
+rd_ctrl rd_ctrl_inst(/*inst*/)
+      {
+      acc_index   :  acc_index_1   
+      acc_status  :  acc_status_1 
+      acc_cmd     :  acc_cmd_1     
+      acc_tag     :  acc_tag_1     
+      return_tag  :  return_tag_1  
+      return_index:  return_index_1
+      acc_req     :  acc_req_1     
+       fetch_cmd:fetch_cmd_r
+       fetch_req:fetch_req_r
+       fetch_tag:fetch_tag_r
+       fetch_addr:fetch_addr_r
+       fetch_addr_pre:fetch_addr_pre_r
+       fetch_gnt:fetch_gnt_r
+       fetch_done:fetch_done_r
+      }
+
+wr_ctrl wr_ctrl_inst(/*inst*/)
+      {
+      acc_index   :  acc_index_0   
+      acc_status  :  acc_status_0 
+      acc_cmd     :  acc_cmd_0     
+      acc_tag     :  acc_tag_0     
+      return_tag  :  return_tag_0  
+      return_index:  return_index_0
+      acc_req     :  acc_req_0     
+       fetch_cmd:fetch_cmd_w
+       fetch_req:fetch_req_w
+       fetch_tag:fetch_tag_w
+       fetch_addr:fetch_addr_w
+       fetch_addr_pre:fetch_addr_pre_w
+       fetch_gnt:fetch_gnt_w
+       fetch_done:fetch_done_w
+      }
+fetch_ctrl fetch_ctrl_inst(/*inst*/)
+
+endmodule

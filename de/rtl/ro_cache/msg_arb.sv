@@ -17,7 +17,7 @@ module msg_arb #(
 
 
 cache_rr_arb #(
-        .WIDTH       (2       ),
+        .WIDTH       (cache_num ),
         .REFLECTION  (0       ))
              cache_rr_arb_msg_inst (
         .clk         (clk                ) ,//input   
