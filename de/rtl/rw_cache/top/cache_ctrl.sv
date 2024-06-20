@@ -1,5 +1,4 @@
 module cache_ctrl #(
-       parameter mem_depth = 32,
        parameter data_width = 32,
        parameter cache_num = 2,
        parameter cache_id = 0,
