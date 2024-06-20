@@ -435,7 +435,7 @@ end else begin: CACHE_GRP
     end
 
     always_comb begin
-        if(msg_wr_cs == DONE && rsp_owner_rd == 2'b01) begin
+        if(msg_wr_cs == DONE && rsp_owner_wr == 2'b01) begin
             msg_rsp_1 = 3'b000;
         end else if(msg_rd_cs == DONE && rsp_owner_rd == 2'b01 && !share_ack_prenest) begin
             msg_rsp_1 = 3'b010;
