@@ -130,8 +130,9 @@ always@(posedge clk or negedge rst_n)begin
         ff0.bgin <=  1'b0;
         ff0.ofst <= {OFST_WIDTH{1'b0}};
         ff0.valid <=  1'b0;
+        ff0.user_info <=  {USER_INFO_WIDTH{1'b0}};
     end else if(src_hsked && ~src_bgin&& (nxt_ptr[(PTR_WIDTH - 2):0] != {(PTR_WIDTH - 1){1'b0}}) &&
-        (ptr[PTR_WIDTH - 1] == nxt_ptr[PTR_WIDTH - 1]) &&~src_done && ~(ff0.valid && ff0.done) ) begin
+        (ptr[PTR_WIDTH - 1] == nxt_ptr[PTR_WIDTH - 1]) && src_done && ~(ff0.valid && ff0.done) ) begin
         ff0.user_info <= {USER_INFO_WIDTH{1'b0}};
         ff0.done <=  1'b0;
         ff0.last <=  1'b0;
@@ -242,10 +243,10 @@ always_comb  begin
         dst_strb = strb_inner;
         dst_data = connect_proc(ff0.data,src_data_shift,ptr[PTR_WIDTH - 2:0]);
         dst_bgin = 1'b0;
+        dst_ofst = ff0.ofst;
     end else if((nxt_ptr[PTR_WIDTH - 1] != ptr[PTR_WIDTH - 1])) begin
         dst_ofst = ff0.ofst;
         dst_bgin = ff0.bgin;
-        dst_ofst = ff0.ofst;
         dst_unit_num =  PTR_WIDTH'(1'b1) << OFST_WIDTH;
         dst_strb  = strb_inner;
         if(nxt_ptr[PTR_WIDTH -2 : 0] == {(PTR_WIDTH- 1){1'b0}}) begin
