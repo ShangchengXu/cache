@@ -1,5 +1,4 @@
 module ro_cache_ctrl #(
-       parameter mem_depth = 32,
        parameter data_width = 32,
        parameter cache_num = 2,
        parameter cache_id = 0,
@@ -15,12 +14,14 @@ module ro_cache_ctrl #(
     input  logic [addr_width - 1 : 0] acc_rd_addr_0,
     output logic [data_width - 1 : 0] acc_rd_data_0,
     output logic                      acc_rd_data_valid_0,
+    input  logic                      acc_rd_data_ready_0,
     output logic                      acc_rd_done_0,
     input  logic                      acc_rd_valid_1,
     output logic                      acc_rd_ready_1,
     input  logic [addr_width - 1 : 0] acc_rd_addr_1,
     output logic [data_width - 1 : 0] acc_rd_data_1,
     output logic                      acc_rd_data_valid_1,
+    input  logic                      acc_rd_data_ready_1,
     output logic                      acc_rd_done_1,
     output logic                      wr_req,
     input  logic                      wr_gnt,
@@ -213,6 +214,7 @@ ro_cache_rd_ctrl #(
         .acc_rd_done        (acc_rd_done_0      ) ,
         .mem_rpri           (mem_rpri_0         ) ,
         .acc_rd_data_valid  (acc_rd_data_valid_0) ,//output  
+        .acc_rd_data_ready  (acc_rd_data_ready_0) ,//output  
         .acc_index          (acc_index_0        ) ,//output  [addr_width - 1 :0]
         .acc_status         (acc_status_0       ) ,//input   [2:0]
         .acc_cmd            (acc_cmd_0          ) ,//output  [2:0]
@@ -262,6 +264,7 @@ ro_cache_rd_ctrl #(
         .acc_rd_done        (acc_rd_done_1      ) ,
         .mem_rpri           (mem_rpri_1         ) ,
         .acc_rd_data_valid  (acc_rd_data_valid_1) ,//output  
+        .acc_rd_data_ready  (acc_rd_data_ready_1) ,//output  
         .acc_index          (acc_index_1        ) ,//output  [addr_width - 1 :0]
         .acc_status         (acc_status_1       ) ,//input   [2:0]
         .acc_cmd            (acc_cmd_1          ) ,//output  [2:0]

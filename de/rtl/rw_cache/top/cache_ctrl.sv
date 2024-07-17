@@ -14,12 +14,14 @@ module cache_ctrl #(
     input  logic [addr_width - 1 : 0] acc_rd_addr,
     output logic [data_width - 1 : 0] acc_rd_data,
     output logic                      acc_rd_data_valid,
+    input  logic                      acc_rd_data_ready,
     output logic                      acc_rd_done,
     input  logic                      acc_wr_valid,
     output logic                      acc_wr_ready,
     input  logic [addr_width - 1 : 0] acc_wr_addr,
     input  logic [data_width - 1 : 0] acc_wr_data,
     output logic                      acc_wr_done,
+    input  logic [data_width/8 - 1: 0]acc_wr_strb,
     output logic                      wr_req,
     input  logic                      wr_gnt,
     output logic [15:0]               wr_len,
@@ -100,6 +102,7 @@ logic [$clog2(list_depth) - 1 : 0]                      proc_tag_r            ;
 logic [$clog2(list_depth) + $clog2(list_width) - 1 : 0] mem_waddr             ;
 logic                                                   mem_wen               ;
 logic                                                   mem_wready            ;
+logic [data_width/8 - 1 : 0]                            mem_wstrb             ;
 logic [data_width - 1 : 0]                              mem_wdata             ;
 logic [1:0]                                             fetch_cmd_w           ;
 logic                                                   fetch_req_w           ;
@@ -179,6 +182,7 @@ mem_ctrl #(
         .mem_rdata_valid        (mem_rdata_valid        ) ,//output  
         .mem_waddr              (mem_waddr              ) ,//input   [$clog2(mem_depth) - 1 : 0]
         .mem_wen                (mem_wen                ) ,//input   
+        .mem_wstrb              (mem_wstrb              ) ,
         .mem_wready             (mem_wready             ) ,//output  
         .mem_wdata              (mem_wdata              ) ,//input   [data_width - 1 : 0]
         .mem_rpri               (mem_rpri               ) ,
@@ -193,7 +197,7 @@ mem_ctrl #(
         .fetch_mem_wready       (fetch_mem_wready       ) ,//output  
         .fetch_mem_wdata        (fetch_mem_wdata        ));//input   [data_width - 1 : 0]
 
-rd_ctrl #(
+rw_cache_rd_ctrl #(
         .addr_width         (addr_width         ),
         .list_depth         (list_depth         ),
         .data_width         (data_width         ),
@@ -208,6 +212,7 @@ rd_ctrl #(
         .acc_rd_done        (acc_rd_done        ) ,
         .mem_rpri           (mem_rpri           ) ,
         .acc_rd_data_valid  (acc_rd_data_valid  ) ,//output  
+        .acc_rd_data_ready  (acc_rd_data_ready  ) ,//output  
         .acc_index          (acc_index_1        ) ,//output  [addr_width - 1 :0]
         .acc_status         (acc_status_1       ) ,//input   [2:0]
         .acc_cmd            (acc_cmd_1          ) ,//output  [2:0]
@@ -241,7 +246,7 @@ rd_ctrl #(
         .mem_rdata          (mem_rdata          ) ,//input   [data_width - 1 : 0]
         .mem_rdata_valid    (mem_rdata_valid    ));//input   
 
-wr_ctrl #(
+rw_cache_wr_ctrl #(
         .addr_width      (addr_width      ),
         .list_depth      (list_depth      ),
         .data_width      (data_width      ),
@@ -255,6 +260,7 @@ wr_ctrl #(
         .acc_wr_data     (acc_wr_data       ) ,//input   [data_width - 1 : 0]
         .acc_index       (acc_index_0       ) ,//output  [addr_width - 1 :0]
         .acc_status      (acc_status_0      ) ,//input   [2:0]
+        .acc_wr_strb     (acc_wr_strb       ) ,
         .mem_wpri        (mem_wpri          ) ,
         .acc_cmd         (acc_cmd_0         ) ,//output  [2:0]
         .acc_tag         (acc_tag_0         ) ,//output  [$clog2(list_depth) - 1 : 0]
@@ -283,6 +289,7 @@ wr_ctrl #(
         .fetch_done      (fetch_done_w      ) ,//input   
         .mem_waddr       (mem_waddr         ) ,//output  [$clog2(list_depth) + $clog2(list_width) - 1 : 0]
         .mem_wen         (mem_wen           ) ,//output  
+        .mem_wstrb       (mem_wstrb         ) ,
         .mem_wready      (mem_wready        ) ,//input   
         .mem_wdata       (mem_wdata         ));//output  [data_width - 1 : 0]
 fetch_ctrl #(

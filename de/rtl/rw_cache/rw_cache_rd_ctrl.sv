@@ -1,4 +1,4 @@
-module rd_ctrl #(
+module rw_cache_rd_ctrl #(
                 parameter addr_width = 32,
                 parameter list_depth = 4,
                 parameter data_width = 32,
@@ -14,6 +14,7 @@ module rd_ctrl #(
                     output   logic [data_width - 1 : 0]          acc_rd_data,
                     output   logic                               acc_rd_done,
                     output   logic                               acc_rd_data_valid,
+                    input    logic                               acc_rd_data_ready,
 
                     output   logic [addr_width - 1 :0]           acc_index,
                     input    logic [2:0]                         acc_status,
@@ -123,6 +124,10 @@ logic cs_is_update_list;
 logic cs_is_acc_mem;
 
 logic fetch_proc;
+
+logic [data_width - 1 : 0] acc_rd_data_latch;
+
+logic acc_rd_data_valid_latch;
 
 assign cs_is_acc_mem = rd_cs == ACC_MEM;
 
@@ -460,7 +465,9 @@ end
 always_comb begin
     mem_ren = 1'b0;
     mem_raddr = 0;
-    if(req_hsked && (rd_cs == NORM || rd_cs == IDLE || rd_cs == WAIT_LOOKUP) 
+    if(acc_rd_data_valid_latch && !(acc_rd_data_valid && acc_rd_data_ready)) begin
+        mem_ren = 1'b0;
+    end else if(req_hsked && (rd_cs == NORM || rd_cs == IDLE || rd_cs == WAIT_LOOKUP) 
                     && (acc_status == 3'b001 || acc_status == 3'b011
                      || acc_status == 3'b010 || acc_status == 3'b110)) begin
             mem_ren = 1'b1;
@@ -474,9 +481,23 @@ always_comb begin
     end
 end
 
-assign acc_rd_data = mem_rdata;
+assign acc_rd_data = acc_rd_data_valid_latch ? acc_rd_data_latch : mem_rdata;
 
-assign acc_rd_data_valid = mem_rdata_valid;
+assign acc_rd_data_valid = mem_rdata_valid || acc_rd_data_valid_latch;
+
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        acc_rd_data_valid_latch <= 1'b0;
+        acc_rd_data_latch <= data_width'(0);
+    end else if(mem_rdata_valid && !acc_rd_data_ready) begin
+        acc_rd_data_valid_latch <= 1'b1;
+        acc_rd_data_latch <= mem_rdata;
+    end else if(acc_rd_data_valid && acc_rd_data_ready) begin
+        acc_rd_data_valid_latch <= 1'b0;
+        acc_rd_data_latch <= data_width'(0);
+    end
+end
 
 
 //acc status

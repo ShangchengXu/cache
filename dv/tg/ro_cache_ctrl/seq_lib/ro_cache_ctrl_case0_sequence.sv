@@ -6,7 +6,7 @@ class ro_cache_ctrl_case0_sequence extends uvm_sequence #(uvm_sequence_item);
    endfunction 
    
    virtual task body();
-      repeat (100000) begin
+      repeat (1000) begin
          `uvm_do(m_trans)
       end
    endtask

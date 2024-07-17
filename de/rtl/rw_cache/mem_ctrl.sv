@@ -19,6 +19,7 @@ module mem_ctrl #(
                     input    logic  [$clog2(mem_depth) - 1 : 0]                        mem_waddr,
                     input    logic                                                     mem_wen,
                     input    logic  [1:0]                                              mem_wpri,
+                    input    logic  [data_width/8 - 1 : 0]                             mem_wstrb,
                     output   logic                                                     mem_wready,
                     input    logic  [data_width - 1 : 0]                               mem_wdata,
 
@@ -43,6 +44,7 @@ logic local_mem_wen,local_mem_ren;
 logic [$clog2(mem_depth) - 1 : 0] local_mem_raddr, local_mem_waddr;
 logic [data_width - 1 : 0] local_mem_wdata, local_mem_rdata;
 logic wr_rd_conflict;
+logic [data_width/8 - 1 : 0] local_mem_wstrb;
 
 logic fetch_whsked;
 logic fetch_rhsked;
@@ -59,7 +61,12 @@ logic [1:0] mem_rd_gnt;
 
 always_ff @( posedge clk ) begin
     if(local_mem_wen)
-        mem[local_mem_waddr] <= local_mem_wdata;
+        // mem[local_mem_waddr] <= local_mem_wdata;
+        for(int i = 0; i < data_width/8; i++) begin
+            if(local_mem_wstrb[i]) begin
+                mem[local_mem_waddr][i * 8 +: 8] <= local_mem_wdata[i * 8 +: 8];
+            end
+        end
 end
 
 assign fetch_whsked = fetch_mem_wen && fetch_mem_wready;
@@ -74,6 +81,7 @@ assign local_mem_ren = rhsked || fetch_rhsked;
 assign wr_rd_conflict = (local_mem_wen && local_mem_ren) && (local_mem_raddr == local_mem_waddr);
 
 assign local_mem_waddr = fetch_whsked ? fetch_mem_waddr : mem_waddr;
+assign local_mem_wstrb = fetch_whsked ? {(data_width/8){1'b1}} : mem_wstrb;
 assign local_mem_raddr = fetch_rhsked ? fetch_mem_raddr : mem_raddr;
 
 assign local_mem_wdata = fetch_whsked ? fetch_mem_wdata : mem_wdata;
