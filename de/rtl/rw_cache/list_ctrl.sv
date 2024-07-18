@@ -287,7 +287,6 @@ always_comb begin
 end
 
 
-//FIXME: need add release logic 
 always_ff@(posedge clk or negedge rst_n) begin
     if(!rst_n) begin
         lru_list.head <= 0;

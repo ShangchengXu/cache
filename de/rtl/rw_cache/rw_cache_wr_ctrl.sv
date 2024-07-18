@@ -1,4 +1,4 @@
-module wr_ctrl #(
+module rw_cache_wr_ctrl #(
                 parameter addr_width = 32,
                 parameter list_depth = 4,
                 parameter data_width = 32,
@@ -13,6 +13,7 @@ module wr_ctrl #(
                     input    logic [addr_width - 1 : 0]          acc_wr_addr,
                     input    logic [data_width - 1 : 0]          acc_wr_data,
                     output   logic                               acc_wr_done,
+                    input    logic  [data_width/8 - 1 : 0]       acc_wr_strb,
 
                     output   logic [addr_width - 1 :0]           acc_index,
                     input    logic [2:0]                         acc_status,
@@ -49,6 +50,7 @@ module wr_ctrl #(
 
                     output   logic  [$clog2(list_depth) + $clog2(list_width) - 1 : 0]  mem_waddr,
                     output   logic                                                     mem_wen,
+                    output   logic  [data_width/8 - 1 : 0]                             mem_wstrb,
                     output   logic  [1:0]                                              mem_wpri,
                     input    logic                                                     mem_wready,
                     output   logic  [data_width - 1 : 0]                               mem_wdata
@@ -78,6 +80,8 @@ wr_state_t wr_cs,wr_ns;
 localparam addr_offset_width = $clog2(list_width * data_width / 8);
 
 logic [addr_width - 1 : 0] acc_wr_addr_ff;
+
+logic [data_width/8 - 1 : 0] acc_wr_strb_ff;
 
 logic [addr_width - 1 : 0] local_addr;
 
@@ -189,6 +193,14 @@ always_ff@(posedge clk or negedge rst_n) begin
         acc_wr_addr_ff <= 0;
     end else if(wr_hsked) begin
         acc_wr_addr_ff <= acc_wr_addr;
+    end
+end
+
+always_ff@(posedge clk or negedge rst_n) begin
+    if(!rst_n) begin
+        acc_wr_strb_ff <= 0;
+    end else if(wr_hsked) begin
+        acc_wr_strb_ff <= acc_wr_strb;
     end
 end
 
@@ -483,6 +495,8 @@ always_comb begin
             mem_waddr = {return_tag_ff,local_addr[addr_offset_width - 1 : 2]};
     end
 end
+
+assign mem_wstrb = wr_hsked ? acc_wr_strb : acc_wr_strb_ff;
 
 
 //acc status
