@@ -53,6 +53,7 @@ task ro_cache_ctrl_monitor::main_phase(uvm_phase phase);
             rd_addr_queue.push_front(vif.acc_rd_addr_0);
          end
          if(vif.acc_rd_done_0) begin
+         // if(vif.acc_rd_data_valid_0 && vif.acc_rd_data_ready_0) begin
             tr = new("tr");
             tr.req = 1'b1;
             tr.addr = rd_addr_queue.pop_back();
@@ -61,6 +62,7 @@ task ro_cache_ctrl_monitor::main_phase(uvm_phase phase);
          if(vif.acc_rd_valid_1 && vif.acc_rd_ready_1) begin
             rd_addr_queue1.push_front(vif.acc_rd_addr_1);
          end
+         // if(vif.acc_rd_data_valid_1 && vif.acc_rd_data_ready_1) begin
          if(vif.acc_rd_done_1) begin
             tr1 = new("tr1");
             tr1.req = 1'b1;
@@ -70,14 +72,16 @@ task ro_cache_ctrl_monitor::main_phase(uvm_phase phase);
       end
       else begin
          @(posedge vif.clk) ;
-         if(vif.acc_rd_data_valid_0) begin
+         // if(vif.acc_rd_data_valid_0 && vif.acc_rd_data_ready_0) begin
+         if(vif.acc_rd_done_0) begin
             tr = new("tr");
             tr.req = 1'b1;
             tr.addr = 0;
             tr.rd_data = vif.acc_rd_data_0;
             ap.write(tr);
          end
-         if(vif.acc_rd_data_valid_1) begin
+         // if(vif.acc_rd_data_valid_1 && vif.acc_rd_data_ready_1) begin
+         if(vif.acc_rd_done_1) begin
             tr1 = new("tr1");
             tr1.req = 1'b1;
             tr1.addr = 0;

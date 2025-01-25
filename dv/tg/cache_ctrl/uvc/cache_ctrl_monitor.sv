@@ -60,7 +60,7 @@ task cache_ctrl_monitor::main_phase(uvm_phase phase);
       end
       else begin
          @(posedge vif.clk) ;
-         if(vif.acc_rd_data_valid) begin
+         if(vif.acc_rd_data_valid && vif.acc_rd_data_ready) begin
             tr1 = new("tr1");
             tr1.req = 1'b1;
             tr1.addr = 0;

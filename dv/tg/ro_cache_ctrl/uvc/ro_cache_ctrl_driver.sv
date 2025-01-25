@@ -42,6 +42,10 @@ task ro_cache_ctrl_driver::main_phase(uvm_phase phase);
    end
    while(1) begin
       @(posedge vif.clk);
+      vif.acc_rd_data_ready_0 <= $urandom_range(0,1);
+   end
+   while(1) begin
+      @(posedge vif.clk);
       if(vif.rd_req &&  vif.rd_gnt) begin
          temp_addr = (vif.rd_addr)/4;
          for(int i = 0 ; i < 32; i++) begin

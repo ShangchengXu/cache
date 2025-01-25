@@ -25,12 +25,18 @@ task ro_cache_ctrl_driver1::main_phase(uvm_phase phase);
    ro_cache_ctrl_transaction tr;
    vif.acc_rd_valid_1 <= 1'b0;
    vif.acc_rd_addr_1 <= 0;
-   while(1) begin
-      seq_item_port.get_next_item(req);
-      $cast(tr,req);
-      drive_one_pkt(tr);
-      seq_item_port.item_done();
-   end
+   fork
+      while(1) begin
+         seq_item_port.get_next_item(req);
+         $cast(tr,req);
+         drive_one_pkt(tr);
+         seq_item_port.item_done();
+      end
+      while(1) begin
+         @(posedge vif.clk);
+         vif.acc_rd_data_ready_1 <= $urandom_range(0,1);
+      end
+   join
 endtask
 
 task ro_cache_ctrl_driver1::drive_one_pkt(ro_cache_ctrl_transaction tr);

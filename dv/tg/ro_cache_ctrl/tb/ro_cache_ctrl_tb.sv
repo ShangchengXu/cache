@@ -39,12 +39,14 @@ ro_cache_ctrl #(
         .acc_rd_addr_0        (ifo.acc_rd_addr_0      ) ,//input   [addr_width - 1 : 0]
         .acc_rd_data_0        (ifo.acc_rd_data_0      ) ,//output  [data_width - 1 : 0]
         .acc_rd_data_valid_0  (ifo.acc_rd_data_valid_0) ,//output  
+        .acc_rd_data_ready_0  (ifo.acc_rd_data_ready_0) ,//input  
         .acc_rd_done_0        (ifo.acc_rd_done_0      ) ,//output  
         .acc_rd_valid_1       (ifo.acc_rd_valid_1     ) ,//input   
         .acc_rd_ready_1       (ifo.acc_rd_ready_1     ) ,//output  
         .acc_rd_addr_1        (ifo.acc_rd_addr_1      ) ,//input   [addr_width - 1 : 0]
         .acc_rd_data_1        (ifo.acc_rd_data_1      ) ,//output  [data_width - 1 : 0]
         .acc_rd_data_valid_1  (ifo.acc_rd_data_valid_1) ,//output  
+        .acc_rd_data_ready_1  (ifo.acc_rd_data_ready_1) ,//input  
         .acc_rd_done_1        (ifo.acc_rd_done_1      ) ,//output  
         .wr_req               (ifo.wr_req             ) ,//output  
         .wr_gnt               (ifo.wr_gnt             ) ,//input   

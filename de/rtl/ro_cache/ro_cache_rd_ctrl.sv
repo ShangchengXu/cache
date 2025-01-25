@@ -158,7 +158,7 @@ assign fetch_hsked = fetch_req && fetch_gnt;
 
 assign mem_rhsked = mem_ren && mem_rready;
 
-assign acc_rd_ready = (rd_cs == IDLE) || (rd_cs == NORM);
+assign acc_rd_ready = ((rd_cs == IDLE) || (rd_cs == NORM)) && !(acc_rd_data_valid && !acc_rd_data_ready);
 
 generate 
 if(rd_id == 0) begin
@@ -472,7 +472,8 @@ end
 always_comb begin
     mem_ren = 1'b0;
     mem_raddr = 0;
-    if(acc_rd_data_valid_latch && !(acc_rd_data_valid && acc_rd_data_ready)) begin
+    // if((acc_rd_data_valid_latch || acc_rd_done) && !(acc_rd_data_valid && acc_rd_data_ready)) begin
+    if(acc_rd_data_valid && !acc_rd_data_ready) begin
         mem_ren = 1'b0;
     end else if(req_hsked && (rd_cs == NORM || rd_cs == IDLE || rd_cs == WAIT_LOOKUP) 
                     && (acc_status == 3'b001 || acc_status == 3'b011

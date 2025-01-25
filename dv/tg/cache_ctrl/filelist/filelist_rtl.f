@@ -1,7 +1,7 @@
 ../../../../../de/rtl/rw_cache/list_ctrl.sv
 ../../../../../de/rtl/rw_cache/mem_ctrl.sv
-../../../../../de/rtl/rw_cache/rd_ctrl.sv
-../../../../../de/rtl/rw_cache/wr_ctrl.sv
+../../../../../de/rtl/rw_cache/rw_cache_rd_ctrl.sv
+../../../../../de/rtl/rw_cache/rw_cache_wr_ctrl.sv
 ../../../../../de/rtl/rw_cache/cache_rr_arb.sv
 ../../../../../de/rtl/rw_cache/fetch_ctrl.sv
 ../../../../../de/rtl/rw_cache/msg_ctrl.sv
